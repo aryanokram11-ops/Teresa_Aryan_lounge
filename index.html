@@ -115,6 +115,14 @@
 
           <p id="guess-feedback">No guesses made yet.</p>
 
+          <!-- Secret Numbers Revealed Box (Shown on Game End) -->
+          <div id="secret-reveal-box" class="hidden-section" style="background: linear-gradient(135deg, #ffeaa7, #fab1a0); padding: 12px; border-radius: 12px; margin: 15px 0; border: 2px solid #e17055;">
+            <h4 style="margin: 0 0 6px 0; color: #d63031;">🔓 Secret Numbers Revealed!</h4>
+            <p style="margin: 0; font-weight: bold; font-size: 1.1rem; color: #2d3436;">
+              Aryan's Secret: <span id="reveal-aryan" style="color: #d63031;">--</span> | Teresa's Secret: <span id="reveal-teresa" style="color: #d63031;">--</span>
+            </p>
+          </div>
+
           <!-- Player History Boxes -->
           <div class="history-container" style="display: flex; justify-content: space-around; gap: 10px; margin-top: 15px;">
             <div id="aryan-history-box" style="flex: 1; background: #fff5f6; padding: 10px; border-radius: 8px; border: 1px solid #ffccd5; max-height: 150px; overflow-y: auto;">

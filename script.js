@@ -224,6 +224,23 @@ function resetGame() {
   });
 }
 
+// Fun/Mocking Roasts for Secret Number Duel
+const lowRoasts = [
+  "Way too low! Are you trying to dig straight to China? 📉",
+  "Too low! Even a sleepy snail crawls higher than that 🐌",
+  "Bruh, way too low. Are we counting backwards today? 💀",
+  "Too low! Did you forget how basic numbers work? 🤡",
+  "Way too low! Is that your IQ or your guess? 🫠"
+];
+
+const highRoasts = [
+  "Way too high! Calm down, stratosphere 🚀",
+  "Too high! Are you aiming for the moon or what? 🌕",
+  "Too high! Gravity called, it wants its altitude back ✈️",
+  "Way too high! Dial it back, big spender 😂",
+  "Too high! You're reaching further than my patience 🙄"
+];
+
 // Secret Number Duel Functions
 function lockSecretNumber() {
   const val = parseInt(document.getElementById('secret-input').value);
@@ -261,12 +278,14 @@ function submitDuelGuess() {
     winner = myDuelRole;
     playSound('win');
   } else if (guessVal < target) {
-    feedbackText = `${myDuelRole} guessed ${guessVal} — Too Low!`;
-    hint = "Too Low ⬇️";
+    const randomLow = lowRoasts[Math.floor(Math.random() * lowRoasts.length)];
+    feedbackText = `${myDuelRole} guessed ${guessVal} — ${randomLow}`;
+    hint = "Too Low 📉";
     playSound('wrong');
   } else {
-    feedbackText = `${myDuelRole} guessed ${guessVal} — Too High!`;
-    hint = "Too High ⬆️";
+    const randomHigh = highRoasts[Math.floor(Math.random() * highRoasts.length)];
+    feedbackText = `${myDuelRole} guessed ${guessVal} — ${randomHigh}`;
+    hint = "Too High 🚀";
     playSound('wrong');
   }
 
@@ -301,7 +320,13 @@ function updateDuelUI() {
 
     if (duelData.winner) {
       document.getElementById('turn-indicator').innerText = `Game Over! 🎉 ${duelData.winner} Wins!`;
+      
+      // Reveal Both Secrets when game ends
+      document.getElementById('secret-reveal-box').classList.remove('hidden-section');
+      document.getElementById('reveal-aryan').innerText = duelData.aryanSecret;
+      document.getElementById('reveal-teresa').innerText = duelData.teresaSecret;
     } else {
+      document.getElementById('secret-reveal-box').classList.add('hidden-section');
       if (turn === myDuelRole) {
         document.getElementById('turn-indicator').innerText = `Make your guess!`;
       } else {
@@ -311,6 +336,7 @@ function updateDuelUI() {
   } else {
     document.getElementById('set-number-box').classList.remove('hidden-section');
     document.getElementById('guess-duel-box').classList.add('hidden-section');
+    document.getElementById('secret-reveal-box').classList.add('hidden-section');
 
     const myLocked = (myDuelRole === 'Aryan' && aryanReady) || (myDuelRole === 'Teresa' && teresaReady);
     if (myLocked) {
