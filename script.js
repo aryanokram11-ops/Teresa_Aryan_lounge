@@ -35,7 +35,7 @@ window.addEventListener('DOMContentLoaded', () => {
   joinRoom(true);
 });
 
-// Web Audio API Hilarious Dog Sound Synthesizer
+// Web Audio API Sound Synthesizer
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx;
 
@@ -46,7 +46,6 @@ function initAudio() {
 function playSound(type) {
   initAudio();
   if (!audioCtx) return;
-
   const now = audioCtx.currentTime;
 
   if (type === 'click') {
@@ -101,19 +100,6 @@ function showSection(sectionId) {
   const targetSection = document.getElementById(sectionId);
   targetSection.classList.add('active-section');
   targetSection.classList.remove('hidden-section');
-
-  const floatingWidget = document.getElementById('floating-video-chat-container');
-  const embeddedSlot = document.getElementById('embedded-video-chat-slot');
-
-  if (sectionId === 'games-hub') {
-    floatingWidget.classList.add('hidden-section');
-    embeddedSlot.classList.remove('hidden-section');
-    syncVideoElements('embedded');
-  } else {
-    floatingWidget.classList.remove('hidden-section');
-    embeddedSlot.classList.add('hidden-section');
-    syncVideoElements('floating');
-  }
 }
 
 function selectGame(gameId) {
@@ -134,32 +120,21 @@ function backToGameList() {
   document.getElementById('game-selection-menu').classList.remove('hidden-section');
 }
 
-function toggleWidgetCollapse() {
-  const body = document.getElementById('video-chat-body');
-  const icon = document.getElementById('collapse-icon');
-  if (body.style.display === 'none') {
-    body.style.display = 'flex';
-    icon.innerText = '▲';
-  } else {
-    body.style.display = 'none';
-    icon.innerText = '▼';
-  }
-}
-
-// Load the YouTube IFrame API asynchronously
+// ================= YOUTUBE & HOST STATE =================
 const tag = document.createElement('script');
 tag.src = "https://www.youtube.com/iframe_api";
 const firstScriptTag = document.getElementsByTagName('script')[0];
 firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
 let player;
-let isSyncingFromRemote = false; // Flag to prevent infinite broadcast loops
+let isSyncingFromRemote = false;
+let currentHostId = null;
 
 function onYouTubeIframeAPIReady() {
   player = new YT.Player('youtube-player', {
     height: '100%',
     width: '100%',
-    videoId: 'jNQXAC9IVRw', // Safe embeddable default video ID
+    videoId: 'jNQXAC9IVRw',
     playerVars: {
       'playsinline': 1,
       'controls': 1,
@@ -174,42 +149,42 @@ function onYouTubeIframeAPIReady() {
 }
 
 function onPlayerReady(event) {
-  console.log("YouTube Watch Party Player Initialized Successfully.");
+  console.log("YouTube Player Ready.");
 }
 
-// Listen to local play/pause actions and broadcast to Firebase
 function onPlayerStateChange(event) {
-  if (isSyncingFromRemote) return; // Skip if this event was triggered by a remote partner update
+  if (isSyncingFromRemote) return;
+  // Only the host can trigger playback sync updates
+  if (currentHostId !== myClientId) return;
 
-  // YT.PlayerState: 1 = PLAYING, 2 = PAUSED
+  const currentTime = player.getCurrentTime();
   if (event.data === YT.PlayerState.PLAYING) {
-    const currentTime = player.getCurrentTime();
     roomRef.child('watchParty').set({
-      state: 'PLAYING',
+      action: 'PLAY',
       time: currentTime,
       updatedBy: myClientId,
-      timestamp: firebase.database.ServerValue.TIMESTAMP
+      timestamp: Date.now()
     });
   } else if (event.data === YT.PlayerState.PAUSED) {
-    const currentTime = player.getCurrentTime();
     roomRef.child('watchParty').set({
-      state: 'PAUSED',
+      action: 'PAUSE',
       time: currentTime,
       updatedBy: myClientId,
-      timestamp: firebase.database.ServerValue.TIMESTAMP
+      timestamp: Date.now()
     });
   }
 }
 
-// Helper function to extract YouTube Video ID from standard formats
 function extractVideoId(url) {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
   const match = url.match(regExp);
   return (match && match[2].length === 11) ? match[2] : null;
 }
 
-// Load video instantly and sync video change to partner
 function loadPastedVideo() {
+  if (currentHostId !== myClientId) {
+    return alert("Only the current Host can load new videos! Win RPS to become host 👑");
+  }
   playSound('click');
   const urlInput = document.getElementById('video-url-input').value.trim();
   const videoId = extractVideoId(urlInput);
@@ -218,20 +193,76 @@ function loadPastedVideo() {
     player.loadVideoById(videoId);
     document.getElementById('video-url-input').value = '';
 
-    // Broadcast new video ID to partner
     roomRef.child('watchParty').set({
+      action: 'LOAD',
       videoId: videoId,
-      state: 'PLAYING',
       time: 0,
       updatedBy: myClientId,
-      timestamp: firebase.database.ServerValue.TIMESTAMP
+      timestamp: Date.now()
     });
   } else {
     alert("Please enter a valid YouTube link! 🥺");
   }
 }
 
-// Firebase Configuration
+// ================= ROCK PAPER SCISSORS HOST BATTLE =================
+function openRpsModal() {
+  playSound('click');
+  document.getElementById('rps-modal').classList.remove('hidden-section');
+  document.getElementById('rps-result-display').innerText = "Make your choice to settle who hosts!";
+}
+
+function closeRpsModal() {
+  playSound('click');
+  document.getElementById('rps-modal').classList.add('hidden-section');
+}
+
+function playRps(myChoice) {
+  playSound('click');
+  roomRef.child(`rps/${myClientId}`).set({
+    choice: myChoice,
+    timestamp: firebase.database.ServerValue.TIMESTAMP
+  });
+  document.getElementById('rps-result-display').innerText = `You chose ${myChoice}. Waiting for partner... ⏳`;
+}
+
+function checkRpsOutcome(rpsData) {
+  const keys = Object.keys(rpsData);
+  if (keys.length < 2) return;
+
+  const players = keys.map(k => ({ id: k, choice: rpsData[k].choice }));
+  const p1 = players[0];
+  const p2 = players[1];
+
+  if (p1.choice === p2.choice) {
+    document.getElementById('rps-result-display').innerText = `Both chose ${p1.choice}! It's a tie, play again! 🤝`;
+    return;
+  }
+
+  let winnerId = null;
+  if (
+    (p1.choice === 'Rock' && p2.choice === 'Scissors') ||
+    (p1.choice === 'Paper' && p2.choice === 'Rock') ||
+    (p1.choice === 'Scissors' && p2.choice === 'Paper')
+  ) {
+    winnerId = p1.id;
+  } else {
+    winnerId = p2.id;
+  }
+
+  // Set winner as host in Firebase
+  roomRef.child('hostId').set(winnerId);
+  const resultMsg = winnerId === myClientId ? "🎉 You won RPS and became the Host! 👑" : "😢 Partner won RPS and is the Host.";
+  document.getElementById('rps-result-display').innerText = resultMsg;
+  playSound('win');
+
+  setTimeout(() => {
+    closeRpsModal();
+    roomRef.child('rps').remove(); // clear rps round
+  }, 2000);
+}
+
+// ================= FIREBASE CONFIG & SYNC =================
 const firebaseConfig = {
   databaseURL: "https://assistant-98715-default-rtdb.firebaseio.com"
 };
@@ -251,99 +282,18 @@ if (!myClientId) {
   localStorage.setItem('lounge_client_id', myClientId);
 }
 
-// Tic-Tac-Toe State
+// Game states
 let myRole = localStorage.getItem('lounge_ttt_role') || null;
 let boardState = ['', '', '', '', '', '', '', '', ''];
 let currentPlayer = 'X';
 let gameActive = true;
+const winningConditions = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
 
-const winningConditions = [
-  [0, 1, 2], [3, 4, 5], [6, 7, 8],
-  [0, 3, 6], [1, 4, 7], [2, 5, 8],
-  [0, 4, 8], [2, 4, 6]
-];
-
-// Secret Number Duel State
 let myDuelRole = localStorage.getItem('lounge_duel_role') || null;
-let duelData = {
-  aryanSecret: null,
-  teresaSecret: null,
-  currentTurn: 'Aryan',
-  feedback: 'Set your secret bone numbers to begin!',
-  winner: null,
-  aryanHistory: [],
-  teresaHistory: [],
-  roles: {}
-};
-
-function setRole(role) {
-  playSound('click');
-  myRole = role;
-  localStorage.setItem('lounge_ttt_role', role);
-  
-  document.getElementById('ttt-select-box').classList.add('hidden-section');
-  document.getElementById('ttt-locked-box').classList.remove('hidden-section');
-  document.getElementById('role-display').innerText = `You are playing as: ${myRole}`;
-}
-
-function setDuelPlayer(role) {
-  playSound('click');
-  const rolesRef = roomRef.child('secretDuel/roles');
-  
-  rolesRef.once('value', (snapshot) => {
-    const roles = snapshot.val() || {};
-    const currentHolder = roles[role];
-
-    if (currentHolder && currentHolder !== myClientId) {
-      alert(`${role} is already taken by your partner! 🥺`);
-      return;
-    }
-
-    const updates = {};
-    if (roles.Aryan === myClientId) updates.Aryan = null;
-    if (roles.Teresa === myClientId) updates.Teresa = null;
-    updates[role] = myClientId;
-
-    rolesRef.update(updates).then(() => {
-      myDuelRole = role;
-      localStorage.setItem('lounge_duel_role', role);
-
-      document.getElementById('duel-select-box').classList.add('hidden-section');
-      document.getElementById('duel-locked-box').classList.remove('hidden-section');
-      document.getElementById('duel-identity').innerText = `You are playing as: ${role}`;
-      updateDuelUI();
-    });
-  });
-}
-
-function resetRoleSelection(gameType) {
-  playSound('click');
-  if (gameType === 'ttt') {
-    localStorage.removeItem('lounge_ttt_role');
-    myRole = null;
-    document.getElementById('ttt-select-box').classList.remove('hidden-section');
-    document.getElementById('ttt-locked-box').classList.add('hidden-section');
-  } else if (gameType === 'duel') {
-    if (myDuelRole) {
-      roomRef.child('secretDuel/roles').once('value', (snapshot) => {
-        const roles = snapshot.val() || {};
-        const updates = {};
-        if (roles.Aryan === myClientId) updates.Aryan = null;
-        if (roles.Teresa === myClientId) updates.Teresa = null;
-        roomRef.child('secretDuel/roles').update(updates);
-      });
-    }
-    localStorage.removeItem('lounge_duel_role');
-    myDuelRole = null;
-    document.getElementById('duel-select-box').classList.remove('hidden-section');
-    document.getElementById('duel-locked-box').classList.add('hidden-section');
-  }
-}
+let duelData = { aryanSecret: null, teresaSecret: null, currentTurn: 'Aryan', feedback: 'Set secrets to begin!', winner: null, aryanHistory: [], teresaHistory: [], roles: {} };
 
 function setupPresence() {
-  if (myPresenceRef) {
-    myPresenceRef.remove();
-  }
+  if (myPresenceRef) myPresenceRef.remove();
   myPresenceRef = roomRef.child('presence').push();
   myPresenceRef.onDisconnect().remove();
   myPresenceRef.set({ online: true, timestamp: firebase.database.ServerValue.TIMESTAMP });
@@ -366,6 +316,28 @@ function listenToRoom() {
         statusEl.style.color = "#ff6b81";
       }
 
+      // Host updates
+      currentHostId = data.hostId || null;
+      const hostBadge = document.getElementById('host-badge');
+      const nonHostShield = document.getElementById('non-host-shield');
+
+      if (currentHostId === myClientId) {
+        hostBadge.innerText = "👑 Host: You (You control video!)";
+        nonHostShield.classList.add('hidden-section');
+      } else if (currentHostId) {
+        hostBadge.innerText = "👑 Host: Partner";
+        nonHostShield.classList.remove('hidden-section');
+      } else {
+        hostBadge.innerText = "👑 Host: Not Decided (Play RPS!)";
+        nonHostShield.classList.add('hidden-section');
+      }
+
+      // RPS updates
+      if (data.rps) {
+        checkRpsOutcome(data.rps);
+      }
+
+      // Tic-Tac-Toe
       if (data.ticTacToe) {
         boardState = data.ticTacToe.boardState || ['', '', '', '', '', '', '', '', ''];
         currentPlayer = data.ticTacToe.currentPlayer || 'X';
@@ -374,49 +346,48 @@ function listenToRoom() {
         checkResult();
       }
 
+      // Secret Duel
       if (data.secretDuel) {
         duelData = data.secretDuel;
         updateDuelUI();
       }
 
-      // Synchronize Watch Party state from partner updates
+      // Watch Party Teleparty Sync
       if (data.watchParty && player && typeof player.loadVideoById === 'function') {
         const wp = data.watchParty;
-        // Only react if the update came from the partner (not ourselves)
         if (wp.updatedBy && wp.updatedBy !== myClientId) {
           isSyncingFromRemote = true;
 
-          // Check if video ID changed
-          const currentVideoUrl = player.getVideoUrl ? player.getVideoUrl() : '';
-          const activeVideoId = wp.videoId;
-          
-          if (activeVideoId && !currentVideoUrl.includes(activeVideoId)) {
-            player.loadVideoById(activeVideoId);
-          }
+          if (wp.action === 'LOAD' && wp.videoId) {
+            player.loadVideoById(wp.videoId);
+          } else {
+            const localTime = player.getCurrentTime();
+            const networkDelay = (Date.now() - (wp.timestamp || Date.now())) / 1000;
+            const targetTime = (wp.time || 0) + (wp.action === 'PLAY' ? networkDelay : 0);
 
-          // Sync timestamp & play/pause state
-          if (wp.time !== undefined) {
-            const timeDiff = Math.abs(player.getCurrentTime() - wp.time);
-            if (timeDiff > 2) {
-              player.seekTo(wp.time, true);
+            if (Math.abs(localTime - targetTime) > 0.8) {
+              player.seekTo(targetTime, true);
+            }
+
+            if (wp.action === 'PLAY') {
+              player.playVideo();
+            } else if (wp.action === 'PAUSE') {
+              player.pauseVideo();
             }
           }
 
-          if (wp.state === 'PLAYING') {
-            player.playVideo();
-          } else if (wp.state === 'PAUSED') {
-            player.pauseVideo();
-          }
-
-          setTimeout(() => {
-            isSyncingFromRemote = false;
-          }, 600);
+          setTimeout(() => { isSyncingFromRemote = false; }, 400);
         }
       }
     } else {
       document.getElementById('room-status').innerText = `Waiting for puppy partner to join... ⏳🐕`;
-      document.getElementById('room-status').style.color = "#ff6b81";
     }
+  });
+
+  // Chat message listener
+  roomRef.child('chatMessages').on('child_added', (snapshot) => {
+    const msg = snapshot.val();
+    appendChatMessage(msg);
   });
 }
 
@@ -441,34 +412,100 @@ function editPartnerCode() {
   playSound('click');
   document.getElementById('room-input-row').classList.remove('hidden-section');
   document.getElementById('room-connected-display').classList.add('hidden-section');
-  document.getElementById('room-status').innerText = "Enter code and click Connect 🐶";
 }
 
-// Tic-Tac-Toe Functions
+// ================= CHAT & MEDIA SHARING =================
+function handleChatKeyDown(event) {
+  if (event.key === 'Enter') sendChatMessage();
+}
+
+function sendChatMessage() {
+  const input = document.getElementById('chat-text-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  roomRef.child('chatMessages').push({
+    sender: myClientId,
+    text: text,
+    type: 'text',
+    timestamp: firebase.database.ServerValue.TIMESTAMP
+  });
+  input.value = '';
+}
+
+function handleMediaUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64Data = e.target.result;
+    roomRef.child('chatMessages').push({
+      sender: myClientId,
+      mediaUrl: base64Data,
+      type: 'media',
+      timestamp: firebase.database.ServerValue.TIMESTAMP
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+function appendChatMessage(msg) {
+  const container = document.getElementById('chat-messages-container');
+  const div = document.createElement('div');
+  div.className = 'chat-msg' + (msg.sender === myClientId ? ' mine' : '');
+
+  if (msg.type === 'media') {
+    div.innerHTML = `<img src="${msg.mediaUrl}" alt="Shared image/gif">`;
+  } else {
+    div.innerText = msg.text;
+  }
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+// ================= GAME FUNCTIONS (Tic-Tac-Toe & Secret Duel) =================
+function setRole(role) {
+  playSound('click');
+  myRole = role;
+  localStorage.setItem('lounge_ttt_role', role);
+  document.getElementById('ttt-select-box').classList.add('hidden-section');
+  document.getElementById('ttt-locked-box').classList.remove('hidden-section');
+  document.getElementById('role-display').innerText = `You are playing as: ${myRole}`;
+}
+
+function resetRoleSelection(gameType) {
+  playSound('click');
+  if (gameType === 'ttt') {
+    localStorage.removeItem('lounge_ttt_role');
+    myRole = null;
+    document.getElementById('ttt-select-box').classList.remove('hidden-section');
+    document.getElementById('ttt-locked-box').classList.add('hidden-section');
+  } else if (gameType === 'duel') {
+    localStorage.removeItem('lounge_duel_role');
+    myDuelRole = null;
+    document.getElementById('duel-select-box').classList.remove('hidden-section');
+    document.getElementById('duel-locked-box').classList.add('hidden-section');
+  }
+}
+
 function makeMove(index) {
-  if (!myRole) return alert("Please select whether you are Player X or O first! ✨");
+  if (!myRole) return alert("Select Player X or O first! ✨");
   if (boardState[index] !== '' || !gameActive) return;
-  if (currentPlayer !== myRole) return alert(`It's Player ${currentPlayer}'s turn! You are Player ${myRole}.`);
+  if (currentPlayer !== myRole) return alert(`It's Player ${currentPlayer}'s turn!`);
 
   playSound('click');
   boardState[index] = currentPlayer;
   const nextPlayer = currentPlayer === 'X' ? 'O' : 'X';
 
-  roomRef.child('ticTacToe').set({
-    boardState: boardState,
-    currentPlayer: nextPlayer,
-    gameActive: gameActive
-  });
+  roomRef.child('ticTacToe').set({ boardState, currentPlayer, gameActive });
 }
 
 function updateUI() {
   const cells = document.getElementsByClassName('cell');
-  for (let i = 0; i < 9; i++) {
-    cells[i].innerText = boardState[i];
-  }
-  if (gameActive) {
-    document.getElementById('status').innerText = `Player ${currentPlayer}'s Turn 🐾`;
-  }
+  for (let i = 0; i < 9; i++) cells[i].innerText = boardState[i];
+  if (gameActive) document.getElementById('status').innerText = `Player ${currentPlayer}'s Turn 🐾`;
 }
 
 function checkResult() {
@@ -476,19 +513,16 @@ function checkResult() {
   for (let condition of winningConditions) {
     let [a, b, c] = condition;
     if (boardState[a] && boardState[a] === boardState[b] && boardState[a] === boardState[c]) {
-      roundWon = true;
-      break;
+      roundWon = true; break;
     }
   }
-
   if (roundWon) {
     const winner = currentPlayer === 'X' ? 'O' : 'X';
-    document.getElementById('status').innerText = `🎉 Puppy Bark! Player ${winner} Wins! 🐶💕`;
+    document.getElementById('status').innerText = `🎉 Player ${winner} Wins! 🐶💕`;
     gameActive = false;
     playSound('win');
     return;
   }
-
   if (!boardState.includes('')) {
     document.getElementById('status').innerText = "It's a Puppy Draw! 🤝🐾";
     gameActive = false;
@@ -498,86 +532,57 @@ function checkResult() {
 
 function resetGame() {
   playSound('click');
-  roomRef.child('ticTacToe').set({
-    boardState: ['', '', '', '', '', '', '', '', ''],
-    currentPlayer: 'X',
-    gameActive: true
-  });
+  roomRef.child('ticTacToe').set({ boardState: ['', '', '', '', '', '', '', '', ''], currentPlayer: 'X', gameActive: true });
 }
 
-const lowRoasts = [
-  "Way too low! Even a sleepy puppy jumps higher than that! 🐾",
-  "Too low, puppy lover! My tail wags warmer than that guess! 🐶",
-  "Way too low! Did you drop your bone or just your standards? 😉"
-];
-
-const highRoasts = [
-  "Way too high! Calm down, guard dog, we aren't chasing the mailman yet! 🐕",
-  "Too high! You're reaching almost as high as a puppy jumping for treats 💕",
-  "Way too high! Dial it back down to cozy nap mode, cutie! 🥰"
-];
-
-const closeRoasts = [
-  "Ooooh! So ridiculously close I can hear the happy tail wags! 🐕‍🦺",
-  "So close! My puppy heart skipped a beat thinking you found the bone! 💓"
-];
+function setDuelPlayer(role) {
+  playSound('click');
+  myDuelRole = role;
+  localStorage.setItem('lounge_duel_role', role);
+  document.getElementById('duel-select-box').classList.add('hidden-section');
+  document.getElementById('duel-locked-box').classList.remove('hidden-section');
+  document.getElementById('duel-identity').innerText = `You are playing as: ${role}`;
+  updateDuelUI();
+}
 
 function lockSecretNumber() {
-  if (!myDuelRole) return alert("Please select whether you are Aryan or Teresa first! ✨");
+  if (!myDuelRole) return alert("Select identity first! ✨");
   const val = parseInt(document.getElementById('secret-input').value);
-  if (isNaN(val) || val < 1 || val > 100) return alert("Enter a valid number between 1 and 100! 🦴");
+  if (isNaN(val) || val < 1 || val > 100) return alert("Enter valid number 1-100! 🦴");
 
   playSound('click');
   const updateObj = {};
   if (myDuelRole === 'Aryan') updateObj.aryanSecret = val;
   else updateObj.teresaSecret = val;
-
   if (!duelData.currentTurn) updateObj.currentTurn = 'Aryan';
 
   roomRef.child('secretDuel').update(updateObj);
-  document.getElementById('secret-status').innerText = "Status: Secret bone hidden! Waiting for partner... 🔒";
 }
 
 function submitDuelGuess() {
-  if (!myDuelRole) return alert("Please select your identity first! ✨");
+  if (!myDuelRole) return alert("Select identity first! ✨");
   const turn = duelData.currentTurn || 'Aryan';
-
-  if (duelData.winner) return alert("The game is over! Reset to play again. 💖");
-  if (turn !== myDuelRole) return alert(`It's ${turn}'s turn to sniff! ⏳`);
+  if (turn !== myDuelRole) return alert(`It's ${turn}'s turn! ⏳`);
 
   const guessVal = parseInt(document.getElementById('guess-input').value);
-  if (isNaN(guessVal) || guessVal < 1 || guessVal > 100) return alert("Enter a valid number between 1 and 100! 🦴");
+  if (isNaN(guessVal) || guessVal < 1 || guessVal > 100) return alert("Enter valid number 1-100! 🦴");
 
   const target = myDuelRole === 'Aryan' ? duelData.teresaSecret : duelData.aryanSecret;
   const nextTurn = myDuelRole === 'Aryan' ? 'Teresa' : 'Aryan';
   let feedbackText = "", hint = "", winner = null;
-  const difference = Math.abs(guessVal - target);
 
   if (guessVal === target) {
-    feedbackText = `🎉 ${myDuelRole} sniffed out ${guessVal} perfectly and WINS! Good puppy! 🐶💕`;
-    hint = "CORRECT 🎉";
-    winner = myDuelRole;
-    playSound('win');
-  } else if (difference <= 5) {
-    const randomClose = closeRoasts[Math.floor(Math.random() * closeRoasts.length)];
-    const direction = guessVal < target ? "Higher 📈" : "Lower 📉";
-    feedbackText = `${myDuelRole} sniffed ${guessVal} — ${randomClose} (Go ${direction})`;
-    hint = `So Close! (${direction})`;
-    playSound('wrong');
+    feedbackText = `🎉 ${myDuelRole} wins by sniffing out ${guessVal}! 🐶💕`;
+    hint = "CORRECT 🎉"; winner = myDuelRole; playSound('win');
   } else if (guessVal < target) {
-    feedbackText = `${myDuelRole} sniffed ${guessVal} — ${lowRoasts[Math.floor(Math.random() * lowRoasts.length)]}`;
-    hint = "Too Low 📉";
-    playSound('wrong');
+    feedbackText = `${myDuelRole} guessed ${guessVal} — Too Low! 📉`; hint = "Too Low 📉"; playSound('wrong');
   } else {
-    feedbackText = `${myDuelRole} sniffed ${guessVal} — ${highRoasts[Math.floor(Math.random() * highRoasts.length)]}`;
-    hint = "Too High 🚀";
-    playSound('wrong');
+    feedbackText = `${myDuelRole} guessed ${guessVal} — Too High! 🚀`; hint = "Too High 🚀"; playSound('wrong');
   }
 
   document.getElementById('guess-input').value = '';
   const aryanHistory = duelData.aryanHistory || [];
   const teresaHistory = duelData.teresaHistory || [];
-
   if (myDuelRole === 'Aryan') aryanHistory.push(`${guessVal} (${hint})`);
   else teresaHistory.push(`${guessVal} (${hint})`);
 
@@ -591,136 +596,54 @@ function submitDuelGuess() {
 }
 
 function updateDuelUI() {
-  const roles = duelData.roles || {};
-  const aryanBtn = document.getElementById('aryan-btn');
-  const teresaBtn = document.getElementById('teresa-btn');
-
-  if (aryanBtn && teresaBtn && !myDuelRole) {
-    if (roles.Aryan && roles.Aryan !== myClientId) {
-      aryanBtn.disabled = true;
-      aryanBtn.innerText = "Aryan (Taken 🔒)";
-      aryanBtn.style.opacity = "0.6";
-    } else {
-      aryanBtn.disabled = false;
-      aryanBtn.innerText = "Aryan 💙";
-      aryanBtn.style.opacity = "1";
-    }
-
-    if (roles.Teresa && roles.Teresa !== myClientId) {
-      teresaBtn.disabled = true;
-      teresaBtn.innerText = "Teresa (Taken 🔒)";
-      teresaBtn.style.opacity = "0.6";
-    } else {
-      teresaBtn.disabled = false;
-      teresaBtn.innerText = "Teresa 💖";
-      teresaBtn.style.opacity = "1";
-    }
-  }
-
   const aryanReady = duelData.aryanSecret !== undefined && duelData.aryanSecret !== null;
   const teresaReady = duelData.teresaSecret !== undefined && duelData.teresaSecret !== null;
-  const turn = duelData.currentTurn || 'Aryan';
 
   if (aryanReady && teresaReady) {
     document.getElementById('set-number-box').classList.add('hidden-section');
     document.getElementById('guess-duel-box').classList.remove('hidden-section');
-
     if (duelData.winner) {
       document.getElementById('turn-indicator').innerText = `Game Over! 🎉 ${duelData.winner} Wins!`;
       document.getElementById('secret-reveal-box').classList.remove('hidden-section');
       document.getElementById('reveal-aryan').innerText = duelData.aryanSecret;
       document.getElementById('reveal-teresa').innerText = duelData.teresaSecret;
-    } else {
-      document.getElementById('secret-reveal-box').classList.add('hidden-section');
-      if (turn === myDuelRole) {
-        document.getElementById('turn-indicator').innerText = `Time to sniff and guess! 🐶`;
-      } else {
-        document.getElementById('turn-indicator').innerText = `Waiting for ${turn} to sniff... ⏳`;
-      }
     }
   } else {
     document.getElementById('set-number-box').classList.remove('hidden-section');
     document.getElementById('guess-duel-box').classList.add('hidden-section');
-    document.getElementById('secret-reveal-box').classList.add('hidden-section');
-
-    const myLocked = (myDuelRole === 'Aryan' && aryanReady) || (myDuelRole === 'Teresa' && teresaReady);
-    if (myLocked) {
-      document.getElementById('secret-status').innerText = "Status: Secret bone hidden! Waiting for partner... 🔒";
-    } else {
-      document.getElementById('secret-status').innerText = `Aryan Ready: ${aryanReady ? '✅' : '❌'} | Teresa Ready: ${teresaReady ? '✅' : '❌'}`;
-    }
   }
-
-  document.getElementById('guess-feedback').innerText = duelData.feedback || 'No guesses made yet.';
-
-  const aryanList = document.getElementById('aryan-history');
-  const teresaList = document.getElementById('teresa-history');
-
-  aryanList.innerHTML = (duelData.aryanHistory || []).map(item => `<li>${item}</li>`).join('');
-  teresaList.innerHTML = (duelData.teresaHistory || []).map(item => `<li>${item}</li>`).join('');
+  document.getElementById('guess-feedback').innerText = duelData.feedback || '';
+  document.getElementById('aryan-history').innerHTML = (duelData.aryanHistory || []).map(i => `<li>${i}</li>`).join('');
+  document.getElementById('teresa-history').innerHTML = (duelData.teresaHistory || []).map(i => `<li>${i}</li>`).join('');
 }
 
 function resetDuelGame() {
   playSound('click');
-  roomRef.child('secretDuel').update({
-    aryanSecret: null,
-    teresaSecret: null,
-    currentTurn: 'Aryan',
-    feedback: 'Game Reset! Hide your secret bones. 🦴',
-    winner: null,
-    aryanHistory: [],
-    teresaHistory: []
-  });
-  document.getElementById('secret-input').value = '';
+  roomRef.child('secretDuel').update({ aryanSecret: null, teresaSecret: null, currentTurn: 'Aryan', feedback: 'Reset!', winner: null, aryanHistory: [], teresaHistory: [] });
 }
 
-// WebRTC Signaling & Active Video Stream Management
+// ================= WEBRTC VIDEO CALLS =================
 let localStream;
 let remoteStream;
 let peerConnection;
 let isInitiator = false;
 
-const rtcConfig = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' }
-  ]
-};
-
-function syncVideoElements(mode) {
-  const localVideoEl = document.getElementById(`${mode}-local-video`);
-  const remoteVideoEl = document.getElementById(`${mode}-remote-video`);
-
-  if (localStream && localVideoEl) localVideoEl.srcObject = localStream;
-  if (remoteStream && remoteVideoEl) remoteVideoEl.srcObject = remoteStream;
-}
+const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
 async function startCall() {
   playSound('click');
-  document.querySelectorAll('.call-btn').forEach(btn => btn.innerText = "Connecting... 🐶");
-
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    
-    const activeSection = document.querySelector('main > section.active-section').id;
-    syncVideoElements(activeSection === 'games-hub' ? 'embedded' : 'floating');
+    document.getElementById('wp-local-video').srcObject = localStream;
 
     createPeerConnection();
 
-    roomRef.child('signals/caller').transaction((currentCaller) => {
-      if (!currentCaller) {
-        return myClientId;
-      }
-      return currentCaller;
-    }, async (error, committed, snapshot) => {
-      if (error) {
-        console.error("Signaling error:", error);
-      } else if (snapshot.val() === myClientId) {
+    roomRef.child('signals/caller').transaction((current) => current || myClientId, async (err, committed, snap) => {
+      if (snap.val() === myClientId) {
         isInitiator = true;
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
         roomRef.child('signals/offer').set({ type: offer.type, sdp: offer.sdp });
-        document.querySelectorAll('.call-btn').forEach(btn => btn.innerText = "Waiting... ⏳");
       } else {
         isInitiator = false;
         roomRef.child('signals/offer').once('value', async (offSnap) => {
@@ -730,75 +653,55 @@ async function startCall() {
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
             roomRef.child('signals/answer').set({ type: answer.type, sdp: answer.sdp });
-            document.querySelectorAll('.call-btn').forEach(btn => btn.innerText = "Connected! 🐾");
           }
         });
       }
     });
 
-    roomRef.child('signals/answer').on('value', async (snapshot) => {
-      const answer = snapshot.val();
+    roomRef.child('signals/answer').on('value', async (snap) => {
+      const answer = snap.val();
       if (answer && isInitiator && !peerConnection.currentRemoteDescription) {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-        document.querySelectorAll('.call-btn').forEach(btn => btn.innerText = "Connected! 🐾");
       }
     });
 
-    roomRef.child('signals/candidates').on('child_added', (snapshot) => {
-      const candidateData = JSON.parse(snapshot.val());
-      if (snapshot.key !== myClientId && peerConnection) {
-        peerConnection.addIceCandidate(new RTCIceCandidate(candidateData)).catch(e => console.error(e));
+    roomRef.child('signals/candidates').on('child_added', (snap) => {
+      const candidate = JSON.parse(snap.val());
+      if (snap.key !== myClientId && peerConnection) {
+        peerConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.error(e));
       }
     });
-
   } catch (err) {
-    console.error("Media access error:", err);
-    alert("Could not access camera or microphone. Please check permissions! 🥺");
-    document.querySelectorAll('.call-btn').forEach(btn => btn.innerText = "Connect");
+    alert("Camera/Microphone access error! Check permissions 🥺");
   }
 }
 
 function createPeerConnection() {
   peerConnection = new RTCPeerConnection(rtcConfig);
-
-  localStream.getTracks().forEach(track => {
-    peerConnection.addTrack(track, localStream);
-  });
+  localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
   remoteStream = new MediaStream();
-  const activeSection = document.querySelector('main > section.active-section').id;
-  const remoteVideoEl = document.getElementById(`${activeSection === 'games-hub' ? 'embedded' : 'floating'}-remote-video`);
-  if (remoteVideoEl) remoteVideoEl.srcObject = remoteStream;
+  document.getElementById('wp-remote-video').srcObject = remoteStream;
 
   peerConnection.ontrack = (event) => {
-    event.streams[0].getTracks().forEach(track => {
-      remoteStream.addTrack(track);
-    });
+    event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
   };
 
   peerConnection.onicecandidate = (event) => {
-    if (event.candidate) {
-      roomRef.child('signals/candidates').push(JSON.stringify(event.candidate));
-    }
+    if (event.candidate) roomRef.child('signals/candidates').push(JSON.stringify(event.candidate));
   };
 }
 
 function toggleAudio() {
   if (!localStream) return;
-  const audioTrack = localStream.getAudioTracks()[0];
-  if (audioTrack) {
-    audioTrack.enabled = !audioTrack.enabled;
-    const label = audioTrack.enabled ? "🎤 Mute" : "🔇 Unmuted";
-    document.querySelectorAll('.audio-btn').forEach(btn => btn.innerText = label);
-  }
+  const track = localStream.getAudioTracks()[0];
+  track.enabled = !track.enabled;
+  document.querySelector('.audio-btn').innerText = track.enabled ? "🎤 Mute" : "🔇 Unmuted";
 }
 
 function toggleVideo() {
   if (!localStream) return;
-  const videoTrack = localStream.getVideoTracks()[0];
-  if (videoTrack) {
-    videoTrack.enabled = !videoTrack.enabled;
-    const label = videoTrack.enabled ? "📹 Cam Off" : "📷 Cam On";
-    document.querySelectorAll('.video-btn').forEach(btn => btn.innerText = label);
-  }
+  const track = localStream.getVideoTracks()[0];
+  track.enabled = !track.enabled;
+  document.querySelector('.video-btn').innerText = track.enabled ? "📹 Cam Off" : "📷 Cam On";
 }
