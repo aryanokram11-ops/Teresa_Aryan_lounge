@@ -1,17 +1,16 @@
 :root {
-  --bg-gradient: linear-gradient(135deg, #ffdde1 0%, #ee9ca7 100%);
-  --card-bg: rgba(255, 255, 255, 0.92);
-  --primary: #ff4757;
-  --secondary: #ff6b81;
-  --accent: #ffa502;
-  --text: #2f3542;
+  --primary: #ff6b81;
+  --primary-hover: #ff4757;
+  --bg-gradient: linear-gradient(135deg, #ffe6eb 0%, #fff0f3 100%);
+  --card-bg: #ffffff;
+  --text-color: #2d3436;
+  --accent-pink: #ff9ff3;
 }
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: var(--bg-gradient);
-  background-attachment: fixed;
-  color: var(--text);
+  color: var(--text-color);
   margin: 0;
   padding: 0;
   display: flex;
@@ -21,233 +20,296 @@ body {
 }
 
 header {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  width: 100%;
+  padding: 15px 0;
   text-align: center;
-  padding: 2rem 1rem 1rem;
-  position: relative;
-  z-index: 10;
+  box-shadow: 0 4px 15px rgba(255, 107, 129, 0.15);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
-h1 {
-  color: #ffffff;
-  text-shadow: 2px 2px 8px rgba(255, 71, 87, 0.6);
-  margin-bottom: 1rem;
-  font-size: 2.5rem;
-  animation: float 3s ease-in-out infinite;
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-6px); }
+.header-gif {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+header h1 {
+  margin: 0;
+  color: var(--primary);
+  font-size: 1.8rem;
+  letter-spacing: 0.5px;
+}
+
+.subtitle {
+  margin: 2px 0 0 0;
+  font-size: 0.9rem;
+  color: #ff7675;
+  font-style: italic;
 }
 
 nav {
+  margin-top: 10px;
   display: flex;
+  gap: 10px;
   justify-content: center;
-  gap: 12px;
 }
 
 nav button {
-  background: white;
+  background: #fff;
   color: var(--primary);
-  border: none;
-  padding: 12px 22px;
-  border-radius: 25px;
-  cursor: pointer;
+  border: 2px solid var(--primary);
+  padding: 8px 18px;
+  border-radius: 20px;
   font-weight: bold;
-  font-size: 1rem;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(255,107,129,0.1);
 }
 
 nav button:hover {
   background: var(--primary);
   color: white;
-  transform: translateY(-3px) scale(1.05);
-  box-shadow: 0 6px 20px rgba(255, 71, 87, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255,107,129,0.3);
 }
 
 main {
   width: 90%;
   max-width: 800px;
-  margin-top: 1rem;
-  margin-bottom: 2rem;
-  position: relative;
-  z-index: 1;
+  margin: 25px auto;
 }
 
-.hidden-section { display: none !important; }
-.active-section { display: block !important; }
+section {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 25px;
+  box-shadow: 0 8px 25px rgba(255, 107, 129, 0.12);
+  border: 2px solid #ffe3e6;
+  animation: fadeIn 0.4s ease-in-out;
+}
 
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hidden-section {
+  display: none !important;
+}
+
+.active-section {
+  display: block;
+}
+
+/* Video Container Style */
 .video-container {
   position: relative;
+  width: 100%;
   padding-bottom: 56.25%;
   height: 0;
+  border-radius: 15px;
   overflow: hidden;
-  border-radius: 16px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-  border: 4px solid white;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.1);
 }
 
 .video-container iframe {
   position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   border: none;
 }
 
-.multiplayer-box, .duel-box {
-  background: var(--card-bg);
-  backdrop-filter: blur(8px);
-  padding: 20px;
-  border-radius: 16px;
-  margin-bottom: 20px;
-  text-align: center;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-  border: 2px solid rgba(255, 255, 255, 0.8);
+/* Multiplayer Setup Box */
+.multiplayer-box {
+  background: #fff5f7;
+  padding: 15px 20px;
+  border-radius: 15px;
+  margin-bottom: 25px;
+  border: 2px dashed #ffb8b8;
 }
 
-.room-row, .role-row, .guess-controls {
-  margin-bottom: 15px;
+.room-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.multiplayer-box input, .guess-controls input, .duel-box input {
-  padding: 10px 14px;
-  border: 2px solid #ffccd5;
+.room-row input {
+  flex: 1;
+  padding: 8px 12px;
   border-radius: 10px;
-  margin-right: 8px;
-  font-size: 1rem;
+  border: 1px solid #ffb8b8;
   outline: none;
-  transition: border-color 0.2s;
+  font-size: 1rem;
 }
 
-.multiplayer-box input:focus, .guess-controls input:focus, .duel-box input:focus {
-  border-color: var(--primary);
-}
-
-.multiplayer-box button, .guess-controls button, .game-card button, .duel-box button {
-  background: linear-gradient(135deg, #ff6b81, #ff4757);
+.room-row button, .duel-box button, .guess-controls button, .role-row button, .reset-btn, .back-btn {
+  background: var(--primary);
   color: white;
   border: none;
-  padding: 10px 16px;
-  border-radius: 10px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-weight: bold;
   cursor: pointer;
-  font-weight: bold;
-  box-shadow: 0 3px 10px rgba(255, 71, 87, 0.3);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.2s ease;
 }
 
-.multiplayer-box button:hover, .guess-controls button:hover, .duel-box button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(255, 71, 87, 0.5);
+.room-row button:hover, .duel-box button:hover, .guess-controls button:hover, .role-row button:hover, .reset-btn:hover, .back-btn:hover {
+  background: var(--primary-hover);
+  transform: scale(1.03);
 }
 
-#room-status, #guess-feedback, #secret-status, #turn-indicator {
-  color: var(--primary);
-  font-weight: bold;
-  font-size: 1.15rem;
+/* Game Selection Menu */
+.menu-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 20px;
 }
 
-#game-selection-menu h2, .game-screen h2 {
-  color: white;
-  text-shadow: 1px 1px 4px rgba(0,0,0,0.2);
+.banner-gif {
+  width: 45px;
+  height: 45px;
 }
 
 .game-list {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  margin-top: 15px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
 }
 
 .game-card {
-  background: var(--card-bg);
-  padding: 22px;
-  border-radius: 16px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  background: linear-gradient(135deg, #fff9fa 0%, #fff0f3 100%);
+  border: 2px solid #ffccd5;
+  border-radius: 15px;
+  padding: 20px;
+  text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  text-align: center;
-  border: 2px solid white;
+  box-shadow: 0 4px 10px rgba(255,107,129,0.05);
 }
 
 .game-card:hover {
-  transform: translateY(-4px) scale(1.01);
-  box-shadow: 0 10px 25px rgba(255,107,129,0.3);
+  transform: translateY(-5px);
+  border-color: var(--primary);
+  box-shadow: 0 8px 20px rgba(255,107,129,0.2);
 }
 
 .game-card h3 {
-  margin: 0 0 8px 0;
+  margin-top: 0;
   color: var(--primary);
-  font-size: 1.3rem;
 }
 
-.game-card p {
-  margin: 0 0 12px 0;
-  color: #57606f;
+.game-card button {
+  margin-top: 10px;
+  background: #ff7675;
 }
 
-.game-screen {
+/* Game Screens General */
+.game-screen h2 {
+  color: var(--primary);
   text-align: center;
+  margin-top: 5px;
+}
+
+.role-row {
+  text-align: center;
+  margin-bottom: 20px;
+  background: #fff0f3;
+  padding: 10px;
+  border-radius: 12px;
 }
 
 .back-btn {
-  background: white;
-  color: #57606f;
-  border: none;
-  padding: 8px 18px;
-  border-radius: 20px;
-  cursor: pointer;
-  font-weight: bold;
+  background: #b2bec3;
   margin-bottom: 15px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  transition: all 0.2s;
 }
 
 .back-btn:hover {
-  background: #f1f2f6;
-  transform: translateX(-3px);
+  background: #636e72;
 }
 
+/* Tic-Tac-Toe Board */
 .board {
   display: grid;
-  grid-template-columns: repeat(3, 100px);
-  grid-gap: 10px;
+  grid-template-columns: repeat(3, 90px);
+  grid-template-rows: repeat(3, 90px);
+  gap: 8px;
   justify-content: center;
   margin: 20px auto;
 }
 
 .cell {
-  width: 100px;
-  height: 100px;
-  background-color: white;
+  background: #fff5f7;
+  border: 2px solid #ffb8b8;
   border-radius: 12px;
+  font-size: 2.2rem;
+  font-weight: bold;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.8rem;
-  font-weight: bold;
+  cursor: pointer;
   color: var(--primary);
-  cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-  transition: transform 0.15s;
-}
-
-.cell:hover {
-  transform: scale(1.05);
-}
-
-.reset-btn {
-  background: var(--text);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: bold;
-  margin-top: 15px;
   transition: background 0.2s;
 }
 
-.reset-btn:hover {
-  background: #57606f;
+.cell:hover {
+  background: #ffe3e6;
+}
+
+#status {
+  text-align: center;
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #d63031;
+  margin-bottom: 15px;
+}
+
+/* Secret Number Duel Box */
+.duel-box {
+  background: #fff9fa;
+  border: 2px solid #ffccd5;
+  border-radius: 15px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.duel-box input[type="password"], .duel-box input[type="number"] {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #ffb8b8;
+  width: 60%;
+  margin-right: 10px;
+  font-size: 1rem;
+  outline: none;
+}
+
+.guess-controls {
+  margin: 15px 0;
+}
+
+.reset-btn {
+  display: block;
+  width: 100%;
+  background: #ff7675;
+  margin-top: 15px;
+  padding: 10px;
 }

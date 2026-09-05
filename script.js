@@ -95,6 +95,13 @@ let currentPartnerCode = "love-lounge";
 let roomRef = db.ref('rooms/' + currentPartnerCode);
 let myPresenceRef = null;
 
+// Unique Client ID for exclusive role locking
+let myClientId = localStorage.getItem('lounge_client_id');
+if (!myClientId) {
+  myClientId = 'client_' + Math.random().toString(36).substr(2, 9);
+  localStorage.setItem('lounge_client_id', myClientId);
+}
+
 // Tic-Tac-Toe State
 let myRole = localStorage.getItem('lounge_ttt_role') || null;
 let boardState = ['', '', '', '', '', '', '', '', ''];
@@ -116,7 +123,8 @@ let duelData = {
   feedback: 'Set your secret numbers to begin!',
   winner: null,
   aryanHistory: [],
-  teresaHistory: []
+  teresaHistory: [],
+  roles: {}
 };
 
 // Initialize role UI states on load
@@ -131,7 +139,6 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('duel-select-box').classList.add('hidden-section');
     document.getElementById('duel-locked-box').classList.remove('hidden-section');
     document.getElementById('duel-identity').innerText = `You are playing as: ${myDuelRole}`;
-    updateDuelUI();
   }
 
   joinRoom();
@@ -149,13 +156,32 @@ function setRole(role) {
 
 function setDuelPlayer(role) {
   playSound('click');
-  myDuelRole = role;
-  localStorage.setItem('lounge_duel_role', role);
+  const rolesRef = roomRef.child('secretDuel/roles');
+  
+  rolesRef.once('value', (snapshot) => {
+    const roles = snapshot.val() || {};
+    const currentHolder = roles[role];
 
-  document.getElementById('duel-select-box').classList.add('hidden-section');
-  document.getElementById('duel-locked-box').classList.remove('hidden-section');
-  document.getElementById('duel-identity').innerText = `You are playing as: ${role}`;
-  updateDuelUI();
+    if (currentHolder && currentHolder !== myClientId) {
+      alert(`${role} is already taken by your partner!`);
+      return;
+    }
+
+    const updates = {};
+    if (roles.Aryan === myClientId) updates.Aryan = null;
+    if (roles.Teresa === myClientId) updates.Teresa = null;
+    updates[role] = myClientId;
+
+    rolesRef.update(updates).then(() => {
+      myDuelRole = role;
+      localStorage.setItem('lounge_duel_role', role);
+
+      document.getElementById('duel-select-box').classList.add('hidden-section');
+      document.getElementById('duel-locked-box').classList.remove('hidden-section');
+      document.getElementById('duel-identity').innerText = `You are playing as: ${role}`;
+      updateDuelUI();
+    });
+  });
 }
 
 function resetRoleSelection(gameType) {
@@ -166,6 +192,15 @@ function resetRoleSelection(gameType) {
     document.getElementById('ttt-select-box').classList.remove('hidden-section');
     document.getElementById('ttt-locked-box').classList.add('hidden-section');
   } else if (gameType === 'duel') {
+    if (myDuelRole) {
+      roomRef.child('secretDuel/roles').once('value', (snapshot) => {
+        const roles = snapshot.val() || {};
+        const updates = {};
+        if (roles.Aryan === myClientId) updates.Aryan = null;
+        if (roles.Teresa === myClientId) updates.Teresa = null;
+        roomRef.child('secretDuel/roles').update(updates);
+      });
+    }
     localStorage.removeItem('lounge_duel_role');
     myDuelRole = null;
     document.getElementById('duel-select-box').classList.remove('hidden-section');
@@ -187,7 +222,6 @@ function listenToRoom() {
   roomRef.on('value', (snapshot) => {
     const data = snapshot.val();
     if (data) {
-      // Check presence for partner status
       const presenceObj = data.presence || {};
       const activeCount = Object.keys(presenceObj).length;
       const statusEl = document.getElementById('room-status');
@@ -292,21 +326,22 @@ function resetGame() {
   });
 }
 
-// Fun/Mocking Roasts for Secret Number Duel
+// Wholesome, Cute, & Short Roasts for Secret Number Duel
 const lowRoasts = [
-  "Way too low! Are you trying to dig straight to China? 📉",
-  "Too low! Even a sleepy snail crawls higher than that 🐌",
-  "Bruh, way too low. Are we counting backwards today? 💀",
-  "Too low! Did you forget how basic numbers work? 🤡",
-  "Way too low! Is that your IQ or your guess? 🫠"
+  "Way too low! Even a sleepy little kitten jumps higher than that! 🐾",
+  "Too low, cutie! My hugs are warmer than that guess! 🤗",
+  "Way too low! Did you drop your glasses or just your standards? 😉"
 ];
 
 const highRoasts = [
-  "Way too high! Calm down, stratosphere 🚀",
-  "Too high! Are you aiming for the moon or what? 🌕",
-  "Too high! Gravity called, it wants its altitude back ✈️",
-  "Way too high! Dial it back, big spender 😂",
-  "Too high! You're reaching further than my patience 🙄"
+  "Way too high! Calm down, astronaut, we haven't built the rocket yet! 🚀",
+  "Too high! You're reaching almost as high as my love for you 💕",
+  "Way too high! Dial it back down to cozy mode, cutie! 🥰"
+];
+
+const closeRoasts = [
+  "Ooooh! So ridiculously close I can almost taste the victory! 🔥",
+  "So close! My heart skipped a beat thinking you got it! 💓"
 ];
 
 // Secret Number Duel Functions
@@ -338,37 +373,36 @@ function submitDuelGuess() {
 
   const target = myDuelRole === 'Aryan' ? duelData.teresaSecret : duelData.aryanSecret;
   const nextTurn = myDuelRole === 'Aryan' ? 'Teresa' : 'Aryan';
-  let feedbackText = "";
-  let hint = "";
-  let winner = null;
+  let feedbackText = "", hint = "", winner = null;
+  const difference = Math.abs(guessVal - target);
 
   if (guessVal === target) {
-    feedbackText = `🎉 ${myDuelRole} guessed ${guessVal} correctly and WINS! 💕`;
+    feedbackText = `🎉 ${myDuelRole} guessed ${guessVal} perfectly and WINS! So proud of you! 💕`;
     hint = "CORRECT 🎉";
     winner = myDuelRole;
     playSound('win');
+  } else if (difference <= 5) {
+    const randomClose = closeRoasts[Math.floor(Math.random() * closeRoasts.length)];
+    const direction = guessVal < target ? "Higher 📈" : "Lower 📉";
+    feedbackText = `${myDuelRole} guessed ${guessVal} — ${randomClose} (Go ${direction})`;
+    hint = `So Close! (${direction})`;
+    playSound('wrong');
   } else if (guessVal < target) {
-    const randomLow = lowRoasts[Math.floor(Math.random() * lowRoasts.length)];
-    feedbackText = `${myDuelRole} guessed ${guessVal} — ${randomLow}`;
+    feedbackText = `${myDuelRole} guessed ${guessVal} — ${lowRoasts[Math.floor(Math.random() * lowRoasts.length)]}`;
     hint = "Too Low 📉";
     playSound('wrong');
   } else {
-    const randomHigh = highRoasts[Math.floor(Math.random() * highRoasts.length)];
-    feedbackText = `${myDuelRole} guessed ${guessVal} — ${randomHigh}`;
+    feedbackText = `${myDuelRole} guessed ${guessVal} — ${highRoasts[Math.floor(Math.random() * highRoasts.length)]}`;
     hint = "Too High 🚀";
     playSound('wrong');
   }
 
   document.getElementById('guess-input').value = '';
-
   const aryanHistory = duelData.aryanHistory || [];
   const teresaHistory = duelData.teresaHistory || [];
 
-  if (myDuelRole === 'Aryan') {
-    aryanHistory.push(`${guessVal} (${hint})`);
-  } else {
-    teresaHistory.push(`${guessVal} (${hint})`);
-  }
+  if (myDuelRole === 'Aryan') aryanHistory.push(`${guessVal} (${hint})`);
+  else teresaHistory.push(`${guessVal} (${hint})`);
 
   roomRef.child('secretDuel').update({
     currentTurn: winner ? turn : nextTurn,
@@ -380,6 +414,32 @@ function submitDuelGuess() {
 }
 
 function updateDuelUI() {
+  const roles = duelData.roles || {};
+  const aryanBtn = document.getElementById('aryan-btn');
+  const teresaBtn = document.getElementById('teresa-btn');
+
+  if (aryanBtn && teresaBtn && !myDuelRole) {
+    if (roles.Aryan && roles.Aryan !== myClientId) {
+      aryanBtn.disabled = true;
+      aryanBtn.innerText = "Aryan (Taken)";
+      aryanBtn.style.opacity = "0.6";
+    } else {
+      aryanBtn.disabled = false;
+      aryanBtn.innerText = "Aryan";
+      aryanBtn.style.opacity = "1";
+    }
+
+    if (roles.Teresa && roles.Teresa !== myClientId) {
+      teresaBtn.disabled = true;
+      teresaBtn.innerText = "Teresa (Taken)";
+      teresaBtn.style.opacity = "0.6";
+    } else {
+      teresaBtn.disabled = false;
+      teresaBtn.innerText = "Teresa";
+      teresaBtn.style.opacity = "1";
+    }
+  }
+
   const aryanReady = duelData.aryanSecret !== undefined && duelData.aryanSecret !== null;
   const teresaReady = duelData.teresaSecret !== undefined && duelData.teresaSecret !== null;
   const turn = duelData.currentTurn || 'Aryan';
@@ -390,8 +450,6 @@ function updateDuelUI() {
 
     if (duelData.winner) {
       document.getElementById('turn-indicator').innerText = `Game Over! 🎉 ${duelData.winner} Wins!`;
-      
-      // Reveal Both Secrets when game ends
       document.getElementById('secret-reveal-box').classList.remove('hidden-section');
       document.getElementById('reveal-aryan').innerText = duelData.aryanSecret;
       document.getElementById('reveal-teresa').innerText = duelData.teresaSecret;
@@ -427,7 +485,7 @@ function updateDuelUI() {
 
 function resetDuelGame() {
   playSound('click');
-  roomRef.child('secretDuel').set({
+  roomRef.child('secretDuel').update({
     aryanSecret: null,
     teresaSecret: null,
     currentTurn: 'Aryan',

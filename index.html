@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Our Lounge</title>
+  <title>Our Little Lounge ❤️</title>
   <link rel="stylesheet" href="style.css">
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -11,7 +11,14 @@
 </head>
 <body>
   <header>
-    <h1>Our Little Lounge ❤️</h1>
+    <div class="header-content">
+      <img src="https://media.giphy.com/media/MDJ9IbxxvDUQM/giphy.gif" alt="Cute Bear Heart" class="header-gif">
+      <div>
+        <h1>Our Little Lounge ❤️</h1>
+        <p class="subtitle">A cozy space just for us</p>
+      </div>
+      <img src="https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif" alt="Cute Cats Hugging" class="header-gif">
+    </div>
     <nav>
       <button type="button" onclick="showSection('movies')">🍿 Watch Party</button>
       <button type="button" onclick="showSection('games-hub')">🎮 Mini-Games</button>
@@ -41,7 +48,11 @@
 
       <!-- Games Selection List -->
       <div id="game-selection-menu">
-        <h2>Choose a Game</h2>
+        <div class="menu-banner">
+          <img src="https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif" alt="Cute dancing cat" class="banner-gif">
+          <h2>Choose a Game</h2>
+          <img src="https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif" alt="Cute dancing cat" class="banner-gif">
+        </div>
         <div class="game-list">
           <div class="game-card" onclick="selectGame('tictactoe')">
             <h3>❌⭕ Tic-Tac-Toe</h3>
@@ -98,8 +109,8 @@
         <div id="duel-role-container" class="role-row">
           <div id="duel-select-box">
             <span>Who are you? </span>
-            <button type="button" onclick="setDuelPlayer('Aryan')">Aryan</button>
-            <button type="button" onclick="setDuelPlayer('Teresa')">Teresa</button>
+            <button type="button" id="aryan-btn" onclick="setDuelPlayer('Aryan')">Aryan</button>
+            <button type="button" id="teresa-btn" onclick="setDuelPlayer('Teresa')">Teresa</button>
           </div>
           <div id="duel-locked-box" class="hidden-section" style="display: inline-flex; align-items: center; justify-content: center; gap: 10px;">
             <span id="duel-identity" style="font-weight: bold; color: var(--primary);">You are playing as: Aryan</span>
@@ -109,6 +120,9 @@
 
         <!-- Phase 1: Set Numbers -->
         <div id="set-number-box" class="duel-box">
+          <div style="text-align: center; margin-bottom: 10px;">
+            <img src="https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif" alt="Cute love gif" style="width: 80px; border-radius: 50%;">
+          </div>
           <h3>Step 1: Set Your Secret Number (1-100)</h3>
           <input type="password" id="secret-input" placeholder="Your Secret Number">
           <button type="button" onclick="lockSecretNumber()">Lock Secret Number</button>
@@ -128,7 +142,8 @@
           <p id="guess-feedback">No guesses made yet.</p>
 
           <!-- Secret Numbers Revealed Box (Shown on Game End) -->
-          <div id="secret-reveal-box" class="hidden-section" style="background: linear-gradient(135deg, #ffeaa7, #fab1a0); padding: 12px; border-radius: 12px; margin: 15px 0; border: 2px solid #e17055;">
+          <div id="secret-reveal-box" class="hidden-section" style="background: linear-gradient(135deg, #ffeaa7, #fab1a0); padding: 12px; border-radius: 12px; margin: 15px 0; border: 2px solid #e17055; text-align: center;">
+            <img src="https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif" alt="Celebrate gif" style="width: 60px; border-radius: 50%; margin-bottom: 5px;">
             <h4 style="margin: 0 0 6px 0; color: #d63031;">🔓 Secret Numbers Revealed!</h4>
             <p style="margin: 0; font-weight: bold; font-size: 1.1rem; color: #2d3436;">
               Aryan's Secret: <span id="reveal-aryan" style="color: #d63031;">--</span> | Teresa's Secret: <span id="reveal-teresa" style="color: #d63031;">--</span>
