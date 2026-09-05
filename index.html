@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Our Lounge</title>
   <link rel="stylesheet" href="style.css">
+  <!-- Added PeerJS library -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body>
   <header>
@@ -12,22 +14,29 @@
     <nav>
       <button onclick="showSection('movies')">🍿 Watch Party</button>
       <button onclick="showSection('games')">🎮 Mini-Games</button>
-      <button onclick="showSection('memories')">📸 Memories</button>
     </nav>
   </header>
 
   <main>
     <section id="movies" class="active-section">
       <h2>Movie Time</h2>
-      <p>Watch YouTube, Twitch, or custom streams together in sync using Teleparty, Watch2Gether, or an embedded player.</p>
       <div class="video-container">
-        <iframe src="https://www.youtube.com/embed/live_stream?channel=YOUR_CHANNEL_ID" allowfullscreen></iframe>
+        <iframe src="https://www.youtube.com/embed/jfKfPfyJRdk" allowfullscreen></iframe>
       </div>
     </section>
 
     <section id="games" class="hidden-section">
-      <h2>Tic-Tac-Toe</h2>
-      <div id="status">Player X's Turn</div>
+      <h2>Live Two-Player Tic-Tac-Toe</h2>
+      
+      <!-- Connection Controls -->
+      <div class="multiplayer-box">
+        <p>Your ID: <b id="my-id">Generating...</b></p>
+        <input type="text" id="partner-id" placeholder="Paste partner ID here">
+        <button onclick="connectToPartner()">Connect</button>
+        <p id="connection-status">Status: Disconnected</p>
+      </div>
+
+      <div id="status">Connect to start playing!</div>
       <div class="board" id="board">
         <div class="cell" onclick="makeMove(0)"></div>
         <div class="cell" onclick="makeMove(1)"></div>
@@ -40,20 +49,6 @@
         <div class="cell" onclick="makeMove(8)"></div>
       </div>
       <button class="reset-btn" onclick="resetGame()">Restart Game</button>
-    </section>
-
-    <section id="memories" class="hidden-section">
-      <h2>Favorite Moments</h2>
-      <div class="gallery">
-        <div class="card">
-          <div class="placeholder-img">📷 Add Photo</div>
-          <p>Our First Date</p>
-        </div>
-        <div class="card">
-          <div class="placeholder-img">📷 Add Photo</div>
-          <p>Movie Night</p>
-        </div>
-      </div>
     </section>
   </main>
 
