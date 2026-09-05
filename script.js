@@ -496,3 +496,117 @@ function resetDuelGame() {
   });
   document.getElementById('secret-input').value = '';
 }
+
+// WebRTC Peer Connection Configuration for Video/Voice Chat
+let localStream;
+let remoteStream;
+let peerConnection;
+
+const rtcConfig = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ]
+};
+
+async function startCall() {
+  playSound('click');
+  document.getElementById('call-btn').innerText = "Connecting...";
+  
+  try {
+    // 1. Get local audio and video
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    document.getElementById('local-video').srcObject = localStream;
+
+    peerConnection = new RTCPeerConnection(rtcConfig);
+
+    // 2. Add local tracks to peer connection
+    localStream.getTracks().forEach(track => {
+      peerConnection.addTrack(track, localStream);
+    });
+
+    // 3. Receive remote tracks
+    remoteStream = new MediaStream();
+    document.getElementById('remote-video').srcObject = remoteStream;
+    peerConnection.ontrack = (event) => {
+      event.streams[0].getTracks().forEach(track => {
+        remoteStream.addTrack(track);
+      });
+    };
+
+    // 4. Handle ICE candidates via Firebase Signaling
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        roomRef.child('signals/candidates').push(JSON.stringify(event.candidate));
+      }
+    };
+
+    // Check if we are caller or callee based on client ID or room setup
+    const callRef = roomRef.child('signals/offer');
+    callRef.once('value', async (snapshot) => {
+      const offer = snapshot.val();
+      if (!offer) {
+        // We are the Caller (Initiator)
+        const offerDescription = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offerDescription);
+        roomRef.child('signals/offer').set({
+          type: offerDescription.type,
+          sdp: offerDescription.sdp
+        });
+        document.getElementById('call-btn').innerText = "Waiting...";
+      } else {
+        // We are the Callee (Receiver)
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+        const answerDescription = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answerDescription);
+        roomRef.child('signals/answer').set({
+          type: answerDescription.type,
+          sdp: answerDescription.sdp
+        });
+        document.getElementById('call-btn').innerText = "Connected! 💖";
+      }
+    });
+
+    // Listen for answer if we created the offer
+    roomRef.child('signals/answer').on('value', async (snapshot) => {
+      const answer = snapshot.val();
+      if (answer && !peerConnection.currentRemoteDescription && peerConnection.signalingState === "have-local-offer") {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+        document.getElementById('call-btn').innerText = "Connected! 💖";
+      }
+    });
+
+    // Listen for incoming ICE candidates
+    roomRef.child('signals/candidates').on('child_added', (snapshot) => {
+      const candidateData = JSON.parse(snapshot.val());
+      if (peerConnection && peerConnection.remoteDescription) {
+        peerConnection.addIceCandidate(new RTCIceCandidate(candidateData)).catch(e => console.error(e));
+      }
+    });
+
+  } catch (error) {
+    console.error("Error accessing media devices.", error);
+    alert("Could not access camera or microphone. Please check permissions!");
+    document.getElementById('call-btn').innerText = "Connect";
+  }
+}
+
+// Toggle Mic Mute / Unmute
+function toggleAudio() {
+  if (!localStream) return;
+  const audioTrack = localStream.getAudioTracks()[0];
+  if (audioTrack) {
+    audioTrack.enabled = !audioTrack.enabled;
+    document.getElementById('audio-btn').innerText = audioTrack.enabled ? "🎤 Mute" : "🔇 Unmuted";
+  }
+}
+
+// Toggle Camera On / Off
+function toggleVideo() {
+  if (!localStream) return;
+  const videoTrack = localStream.getVideoTracks()[0];
+  if (videoTrack) {
+    videoTrack.enabled = !videoTrack.enabled;
+    document.getElementById('video-btn').innerText = videoTrack.enabled ? "📹 Cam Off" : "📷 Cam On";
+  }
+}
