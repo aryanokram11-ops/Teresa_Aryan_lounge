@@ -1,20 +1,29 @@
 function showSection(sectionId) {
-  const moviesSection = document.getElementById('movies');
-  const gamesSection = document.getElementById('games');
+  document.querySelectorAll('main > section').forEach(sec => {
+    sec.classList.add('hidden-section');
+    sec.classList.remove('active-section');
+  });
+  document.getElementById(sectionId).classList.add('active-section');
+  document.getElementById(sectionId).classList.remove('hidden-section');
+}
 
-  if (sectionId === 'movies') {
-    moviesSection.classList.add('active-section');
-    moviesSection.classList.remove('hidden-section');
-    gamesSection.classList.add('hidden-section');
-    gamesSection.classList.remove('active-section');
-  } else if (sectionId === 'games') {
-    gamesSection.classList.add('active-section');
-    gamesSection.classList.remove('hidden-section');
-    moviesSection.classList.add('hidden-section');
-    moviesSection.classList.remove('active-section');
+function selectGame(gameId) {
+  document.getElementById('game-selection-menu').classList.add('hidden-section');
+  document.querySelectorAll('.game-screen').forEach(screen => screen.classList.add('hidden-section'));
+
+  if (gameId === 'tictactoe') {
+    document.getElementById('tictactoe-game').classList.remove('hidden-section');
+  } else if (gameId === 'guessing') {
+    document.getElementById('guessing-game').classList.remove('hidden-section');
   }
 }
-// Database Config with YOUR project's exact URL
+
+function backToGameList() {
+  document.querySelectorAll('.game-screen').forEach(screen => screen.classList.add('hidden-section'));
+  document.getElementById('game-selection-menu').classList.remove('hidden-section');
+}
+
+// Firebase Config
 const firebaseConfig = {
   databaseURL: "https://assistant-98715-default-rtdb.firebaseio.com"
 };
@@ -27,6 +36,7 @@ const db = firebase.database();
 let currentRoomCode = "love-lounge";
 let roomRef = db.ref('rooms/' + currentRoomCode);
 
+// Tic-Tac-Toe State
 let myRole = 'X';
 let boardState = ['', '', '', '', '', '', '', '', ''];
 let currentPlayer = 'X';
@@ -38,6 +48,11 @@ const winningConditions = [
   [0, 4, 8], [2, 4, 6]
 ];
 
+// Number Guessing State
+let targetNumber = Math.floor(Math.random() * 100) + 1;
+let guessCount = 0;
+let guessFeedback = "Waiting for first guess...";
+
 function setRole(role) {
   myRole = role;
   document.getElementById('role-display').innerText = `You are playing as: ${myRole}`;
@@ -48,21 +63,27 @@ function listenToRoom() {
   roomRef.on('value', (snapshot) => {
     const data = snapshot.val();
     if (data) {
-      boardState = data.boardState || ['', '', '', '', '', '', '', '', ''];
-      currentPlayer = data.currentPlayer || 'X';
-      gameActive = data.gameActive !== undefined ? data.gameActive : true;
-      updateUI();
-      checkResult();
+      if (data.ticTacToe) {
+        boardState = data.ticTacToe.boardState || ['', '', '', '', '', '', '', '', ''];
+        currentPlayer = data.ticTacToe.currentPlayer || 'X';
+        gameActive = data.ticTacToe.gameActive !== undefined ? data.ticTacToe.gameActive : true;
+        updateUI();
+        checkResult();
+      }
+
+      if (data.numberGame) {
+        targetNumber = data.numberGame.targetNumber;
+        guessCount = data.numberGame.guessCount || 0;
+        guessFeedback = data.numberGame.guessFeedback || "Waiting for first guess...";
+        updateGuessingUI();
+      }
     }
   });
 }
 
 function joinRoom() {
   const inputCode = document.getElementById('room-input').value.trim();
-  if (!inputCode) {
-    alert("Please enter a room code!");
-    return;
-  }
+  if (!inputCode) return alert("Please enter a room code!");
   
   currentRoomCode = inputCode;
   roomRef = db.ref('rooms/' + currentRoomCode);
@@ -71,18 +92,15 @@ function joinRoom() {
   listenToRoom();
 }
 
+// Tic-Tac-Toe
 function makeMove(index) {
   if (boardState[index] !== '' || !gameActive) return;
-  
-  if (currentPlayer !== myRole) {
-    alert(`It's Player ${currentPlayer}'s turn! You are Player ${myRole}.`);
-    return;
-  }
+  if (currentPlayer !== myRole) return alert(`It's Player ${currentPlayer}'s turn! You are Player ${myRole}.`);
 
   boardState[index] = currentPlayer;
   const nextPlayer = currentPlayer === 'X' ? 'O' : 'X';
 
-  roomRef.set({
+  roomRef.child('ticTacToe').set({
     boardState: boardState,
     currentPlayer: nextPlayer,
     gameActive: gameActive
@@ -119,17 +137,56 @@ function checkResult() {
   if (!boardState.includes('')) {
     document.getElementById('status').innerText = "It's a Draw!";
     gameActive = false;
-    return;
   }
 }
 
 function resetGame() {
-  roomRef.set({
+  roomRef.child('ticTacToe').set({
     boardState: ['', '', '', '', '', '', '', '', ''],
     currentPlayer: 'X',
     gameActive: true
   });
 }
 
-// Attach default room on boot
+// Number Guessing
+function submitGuess() {
+  const inputEl = document.getElementById('guess-input');
+  const val = parseInt(inputEl.value);
+
+  if (isNaN(val) || val < 1 || val > 100) {
+    return alert("Please enter a valid number between 1 and 100!");
+  }
+
+  guessCount++;
+  if (val === targetNumber) {
+    guessFeedback = `🎉 Correct! The number was ${targetNumber}!`;
+  } else if (val < targetNumber) {
+    guessFeedback = `📈 Too Low! (Guessed: ${val})`;
+  } else {
+    guessFeedback = `📉 Too High! (Guessed: ${val})`;
+  }
+
+  inputEl.value = '';
+
+  roomRef.child('numberGame').set({
+    targetNumber: targetNumber,
+    guessCount: guessCount,
+    guessFeedback: guessFeedback
+  });
+}
+
+function updateGuessingUI() {
+  document.getElementById('guess-feedback').innerText = guessFeedback;
+  document.getElementById('guess-count').innerText = `Total Guesses: ${guessCount}`;
+}
+
+function resetGuessingGame() {
+  const newTarget = Math.floor(Math.random() * 100) + 1;
+  roomRef.child('numberGame').set({
+    targetNumber: newTarget,
+    guessCount: 0,
+    guessFeedback: "Game Reset! Try to guess the new number (1-100)."
+  });
+}
+
 listenToRoom();

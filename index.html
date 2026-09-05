@@ -13,7 +13,7 @@
     <h1>Our Little Lounge ❤️</h1>
     <nav>
       <button type="button" onclick="showSection('movies')">🍿 Watch Party</button>
-      <button type="button" onclick="showSection('games')">🎮 Mini-Games</button>
+      <button type="button" onclick="showSection('games-hub')">🎮 Mini-Games</button>
     </nav>
   </header>
 
@@ -25,39 +25,73 @@
       </div>
     </section>
 
-    <section id="games" class="hidden-section">
-      <h2>Real-Time Tic-Tac-Toe</h2>
-      
+    <section id="games-hub" class="hidden-section">
       <div class="multiplayer-box">
         <div class="room-row">
           <label for="room-input"><b>Room Code:</b></label>
           <input type="text" id="room-input" value="love-lounge" placeholder="Enter room code">
           <button type="button" onclick="joinRoom()">Join Room</button>
         </div>
+        <p id="room-status">Connected to room: love-lounge</p>
+      </div>
+
+      <div id="game-selection-menu">
+        <h2>Choose a Game</h2>
+        <div class="game-list">
+          <div class="game-card" onclick="selectGame('tictactoe')">
+            <h3>❌⭕ Tic-Tac-Toe</h3>
+            <p>Classic 2-player real-time grid game.</p>
+            <button type="button">Play Game</button>
+          </div>
+          <div class="game-card" onclick="selectGame('guessing')">
+            <h3>🔢 Number Guessing</h3>
+            <p>Try to guess the secret target number from 1 to 100.</p>
+            <button type="button">Play Game</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="tictactoe-game" class="game-screen hidden-section">
+        <button type="button" class="back-btn" onclick="backToGameList()">← Back to Games Menu</button>
+        <h2>Real-Time Tic-Tac-Toe</h2>
         
         <div class="role-row">
           <span>Pick your symbol: </span>
           <button type="button" onclick="setRole('X')">Play as X</button>
           <button type="button" onclick="setRole('O')">Play as O</button>
         </div>
-        
         <p id="role-display">You are playing as: X</p>
-        <p id="room-status">Connected to room: love-lounge</p>
+
+        <div id="status">Player X's Turn</div>
+        <div class="board" id="board">
+          <div class="cell" onclick="makeMove(0)"></div>
+          <div class="cell" onclick="makeMove(1)"></div>
+          <div class="cell" onclick="makeMove(2)"></div>
+          <div class="cell" onclick="makeMove(3)"></div>
+          <div class="cell" onclick="makeMove(4)"></div>
+          <div class="cell" onclick="makeMove(5)"></div>
+          <div class="cell" onclick="makeMove(6)"></div>
+          <div class="cell" onclick="makeMove(7)"></div>
+          <div class="cell" onclick="makeMove(8)"></div>
+        </div>
+        <button type="button" class="reset-btn" onclick="resetGame()">Restart Game</button>
       </div>
 
-      <div id="status">Player X's Turn</div>
-      <div class="board" id="board">
-        <div class="cell" onclick="makeMove(0)"></div>
-        <div class="cell" onclick="makeMove(1)"></div>
-        <div class="cell" onclick="makeMove(2)"></div>
-        <div class="cell" onclick="makeMove(3)"></div>
-        <div class="cell" onclick="makeMove(4)"></div>
-        <div class="cell" onclick="makeMove(5)"></div>
-        <div class="cell" onclick="makeMove(6)"></div>
-        <div class="cell" onclick="makeMove(7)"></div>
-        <div class="cell" onclick="makeMove(8)"></div>
+      <div id="guessing-game" class="game-screen hidden-section">
+        <button type="button" class="back-btn" onclick="backToGameList()">← Back to Games Menu</button>
+        <h2>Number Guessing Game</h2>
+        <p>Target Number is between 1 and 100!</p>
+
+        <div class="guess-controls">
+          <input type="number" id="guess-input" placeholder="Enter number (1-100)" min="1" max="100">
+          <button type="button" onclick="submitGuess()">Submit Guess</button>
+        </div>
+
+        <p id="guess-feedback">Waiting for a guess...</p>
+        <p id="guess-count">Total Guesses: 0</p>
+
+        <button type="button" class="reset-btn" onclick="resetGuessingGame()">New Target Number</button>
       </div>
-      <button type="button" class="reset-btn" onclick="resetGame()">Restart Game</button>
     </section>
   </main>
 

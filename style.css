@@ -43,7 +43,6 @@ nav button {
   cursor: pointer;
   font-weight: bold;
   transition: transform 0.2s, background-color 0.2s;
-  pointer-events: auto;
 }
 
 nav button:hover {
@@ -88,18 +87,18 @@ main {
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
-.room-row, .role-row {
+.room-row, .role-row, .guess-controls {
   margin-bottom: 12px;
 }
 
-.multiplayer-box input {
+.multiplayer-box input, .guess-controls input {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 5px;
   margin-right: 5px;
 }
 
-.multiplayer-box button {
+.multiplayer-box button, .guess-controls button, .game-card button {
   background: var(--primary);
   color: white;
   border: none;
@@ -108,12 +107,63 @@ main {
   cursor: pointer;
 }
 
-#room-status {
+#room-status, #guess-feedback {
   color: var(--primary);
   font-weight: bold;
+  font-size: 1.1rem;
 }
 
-#games { text-align: center; }
+/* Game Selection Menu Cards */
+#game-selection-menu {
+  text-align: center;
+}
+
+.game-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.game-card {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  text-align: center;
+}
+
+.game-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(255,107,129,0.2);
+}
+
+.game-card h3 {
+  margin: 0 0 8px 0;
+  color: var(--primary);
+}
+
+.game-card p {
+  margin: 0 0 12px 0;
+  color: #57606f;
+}
+
+/* Game Screens */
+.game-screen {
+  text-align: center;
+}
+
+.back-btn {
+  background: #747d8c;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  margin-bottom: 15px;
+}
 
 .board {
   display: grid;
@@ -145,4 +195,5 @@ main {
   padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
+  margin-top: 10px;
 }
