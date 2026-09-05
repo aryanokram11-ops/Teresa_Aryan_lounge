@@ -1,17 +1,17 @@
-// Dynamic Floating Background Hearts Generator
+// Dynamic Floating Background Hearts & Paws Generator
 window.addEventListener('DOMContentLoaded', () => {
   const heartsBg = document.getElementById('hearts-bg');
-  const heartSymbols = ['💖', '✨', '💕', '💗', '⭐', '❤️', '🌸'];
+  const symbols = ['🐶', '🐾', '💖', '🦴', '✨', '💕', '🐕', '❤️'];
   
-  for (let i = 0; i < 18; i++) {
-    const heart = document.createElement('div');
-    heart.className = 'heart-particle';
-    heart.innerText = heartSymbols[Math.floor(Math.random() * heartSymbols.length)];
-    heart.style.left = Math.random() * 100 + 'vw';
-    heart.style.animationDuration = (6 + Math.random() * 6) + 's';
-    heart.style.animationDelay = (Math.random() * 5) + 's';
-    heart.style.fontSize = (16 + Math.random() * 18) + 'px';
-    heartsBg.appendChild(heart);
+  for (let i = 0; i < 20; i++) {
+    const item = document.createElement('div');
+    item.className = 'heart-particle';
+    item.innerText = symbols[Math.floor(Math.random() * symbols.length)];
+    item.style.left = Math.random() * 100 + 'vw';
+    item.style.animationDuration = (6 + Math.random() * 6) + 's';
+    item.style.animationDelay = (Math.random() * 5) + 's';
+    item.style.fontSize = (18 + Math.random() * 18) + 'px';
+    heartsBg.appendChild(item);
   }
 
   if (myRole) {
@@ -35,7 +35,7 @@ window.addEventListener('DOMContentLoaded', () => {
   joinRoom(true);
 });
 
-// Web Audio API Synthesized Meme Sound Generator
+// Web Audio API Hilarious Dog Sound Synthesizer
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx;
 
@@ -52,41 +52,42 @@ function playSound(type) {
   if (type === 'click') {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(450, now);
-    osc.frequency.exponentialRampToValueAtTime(850, now + 0.06);
-    gain.gain.setValueAtTime(0.3, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(600, now);
+    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.08);
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
     osc.start(now);
-    osc.stop(now + 0.06);
+    osc.stop(now + 0.08);
   } else if (type === 'win') {
-    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-    notes.forEach((freq, idx) => {
+    const barkFreqs = [450, 550, 450, 650, 800];
+    barkFreqs.forEach((freq, idx) => {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.25, now + idx * 0.1);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.1 + 0.25);
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+      osc.frequency.linearRampToValueAtTime(freq + 100, now + idx * 0.08 + 0.05);
+      gain.gain.setValueAtTime(0.2, now + idx * 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.08 + 0.07);
       osc.connect(gain);
       gain.connect(audioCtx.destination);
-      osc.start(now + idx * 0.1);
-      osc.stop(now + idx * 0.1 + 0.25);
+      osc.start(now + idx * 0.08);
+      osc.stop(now + idx * 0.08 + 0.07);
     });
   } else if (type === 'wrong') {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(220, now);
-    osc.frequency.linearRampToValueAtTime(110, now + 0.3);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(350, now);
+    osc.frequency.linearRampToValueAtTime(150, now + 0.35);
     gain.gain.setValueAtTime(0.3, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
     osc.start(now);
-    osc.stop(now + 0.3);
+    osc.stop(now + 0.35);
   }
 }
 
@@ -145,6 +146,91 @@ function toggleWidgetCollapse() {
   }
 }
 
+// Load the YouTube IFrame API asynchronously
+const tag = document.createElement('script');
+tag.src = "https://www.youtube.com/iframe_api";
+const firstScriptTag = document.getElementsByTagName('script')[0];
+firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+let player;
+let isSyncingFromRemote = false; // Flag to prevent infinite broadcast loops
+
+function onYouTubeIframeAPIReady() {
+  player = new YT.Player('youtube-player', {
+    height: '100%',
+    width: '100%',
+    videoId: 'jNQXAC9IVRw', // Safe embeddable default video ID
+    playerVars: {
+      'playsinline': 1,
+      'controls': 1,
+      'autoplay': 0,
+      'enablejsapi': 1
+    },
+    events: {
+      'onReady': onPlayerReady,
+      'onStateChange': onPlayerStateChange
+    }
+  });
+}
+
+function onPlayerReady(event) {
+  console.log("YouTube Watch Party Player Initialized Successfully.");
+}
+
+// Listen to local play/pause actions and broadcast to Firebase
+function onPlayerStateChange(event) {
+  if (isSyncingFromRemote) return; // Skip if this event was triggered by a remote partner update
+
+  // YT.PlayerState: 1 = PLAYING, 2 = PAUSED
+  if (event.data === YT.PlayerState.PLAYING) {
+    const currentTime = player.getCurrentTime();
+    roomRef.child('watchParty').set({
+      state: 'PLAYING',
+      time: currentTime,
+      updatedBy: myClientId,
+      timestamp: firebase.database.ServerValue.TIMESTAMP
+    });
+  } else if (event.data === YT.PlayerState.PAUSED) {
+    const currentTime = player.getCurrentTime();
+    roomRef.child('watchParty').set({
+      state: 'PAUSED',
+      time: currentTime,
+      updatedBy: myClientId,
+      timestamp: firebase.database.ServerValue.TIMESTAMP
+    });
+  }
+}
+
+// Helper function to extract YouTube Video ID from standard formats
+function extractVideoId(url) {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+}
+
+// Load video instantly and sync video change to partner
+function loadPastedVideo() {
+  playSound('click');
+  const urlInput = document.getElementById('video-url-input').value.trim();
+  const videoId = extractVideoId(urlInput);
+  
+  if (videoId) {
+    player.loadVideoById(videoId);
+    document.getElementById('video-url-input').value = '';
+
+    // Broadcast new video ID to partner
+    roomRef.child('watchParty').set({
+      videoId: videoId,
+      state: 'PLAYING',
+      time: 0,
+      updatedBy: myClientId,
+      timestamp: firebase.database.ServerValue.TIMESTAMP
+    });
+  } else {
+    alert("Please enter a valid YouTube link! 🥺");
+  }
+}
+
 // Firebase Configuration
 const firebaseConfig = {
   databaseURL: "https://assistant-98715-default-rtdb.firebaseio.com"
@@ -183,7 +269,7 @@ let duelData = {
   aryanSecret: null,
   teresaSecret: null,
   currentTurn: 'Aryan',
-  feedback: 'Set your secret numbers to begin!',
+  feedback: 'Set your secret bone numbers to begin!',
   winner: null,
   aryanHistory: [],
   teresaHistory: [],
@@ -273,10 +359,10 @@ function listenToRoom() {
       const statusEl = document.getElementById('room-status');
 
       if (activeCount >= 2) {
-        statusEl.innerText = `Partner Connected! ❤️✨`;
+        statusEl.innerText = `Puppy Partner Connected! 🐶🐾`;
         statusEl.style.color = "#2ed573";
       } else {
-        statusEl.innerText = `Waiting for partner to join... ⏳💖`;
+        statusEl.innerText = `Waiting for puppy partner to join... ⏳🐕`;
         statusEl.style.color = "#ff6b81";
       }
 
@@ -292,8 +378,43 @@ function listenToRoom() {
         duelData = data.secretDuel;
         updateDuelUI();
       }
+
+      // Synchronize Watch Party state from partner updates
+      if (data.watchParty && player && typeof player.loadVideoById === 'function') {
+        const wp = data.watchParty;
+        // Only react if the update came from the partner (not ourselves)
+        if (wp.updatedBy && wp.updatedBy !== myClientId) {
+          isSyncingFromRemote = true;
+
+          // Check if video ID changed
+          const currentVideoUrl = player.getVideoUrl ? player.getVideoUrl() : '';
+          const activeVideoId = wp.videoId;
+          
+          if (activeVideoId && !currentVideoUrl.includes(activeVideoId)) {
+            player.loadVideoById(activeVideoId);
+          }
+
+          // Sync timestamp & play/pause state
+          if (wp.time !== undefined) {
+            const timeDiff = Math.abs(player.getCurrentTime() - wp.time);
+            if (timeDiff > 2) {
+              player.seekTo(wp.time, true);
+            }
+          }
+
+          if (wp.state === 'PLAYING') {
+            player.playVideo();
+          } else if (wp.state === 'PAUSED') {
+            player.pauseVideo();
+          }
+
+          setTimeout(() => {
+            isSyncingFromRemote = false;
+          }, 600);
+        }
+      }
     } else {
-      document.getElementById('room-status').innerText = `Waiting for partner to join... ⏳💖`;
+      document.getElementById('room-status').innerText = `Waiting for puppy partner to join... ⏳🐕`;
       document.getElementById('room-status').style.color = "#ff6b81";
     }
   });
@@ -302,7 +423,7 @@ function listenToRoom() {
 function joinRoom(isAuto = false) {
   if (!isAuto) playSound('click');
   const inputCode = document.getElementById('room-input').value.trim();
-  if (!inputCode) return alert("Please enter a partner code! 💖");
+  if (!inputCode) return alert("Please enter a partner code! 🐾");
   
   currentPartnerCode = inputCode;
   localStorage.setItem('lounge_partner_code', currentPartnerCode);
@@ -320,7 +441,7 @@ function editPartnerCode() {
   playSound('click');
   document.getElementById('room-input-row').classList.remove('hidden-section');
   document.getElementById('room-connected-display').classList.add('hidden-section');
-  document.getElementById('room-status').innerText = "Enter code and click Connect 💖";
+  document.getElementById('room-status').innerText = "Enter code and click Connect 🐶";
 }
 
 // Tic-Tac-Toe Functions
@@ -346,7 +467,7 @@ function updateUI() {
     cells[i].innerText = boardState[i];
   }
   if (gameActive) {
-    document.getElementById('status').innerText = `Player ${currentPlayer}'s Turn ✨`;
+    document.getElementById('status').innerText = `Player ${currentPlayer}'s Turn 🐾`;
   }
 }
 
@@ -362,14 +483,14 @@ function checkResult() {
 
   if (roundWon) {
     const winner = currentPlayer === 'X' ? 'O' : 'X';
-    document.getElementById('status').innerText = `🎉 Player ${winner} Wins! 💕 Yaaay!`;
+    document.getElementById('status').innerText = `🎉 Puppy Bark! Player ${winner} Wins! 🐶💕`;
     gameActive = false;
     playSound('win');
     return;
   }
 
   if (!boardState.includes('')) {
-    document.getElementById('status').innerText = "It's a Cozy Draw! 🤝💖";
+    document.getElementById('status').innerText = "It's a Puppy Draw! 🤝🐾";
     gameActive = false;
     playSound('wrong');
   }
@@ -385,26 +506,26 @@ function resetGame() {
 }
 
 const lowRoasts = [
-  "Way too low! Even a sleepy little kitten jumps higher than that! 🐾",
-  "Too low, cutie! My hugs are warmer than that guess! 🤗",
-  "Way too low! Did you drop your glasses or just your standards? 😉"
+  "Way too low! Even a sleepy puppy jumps higher than that! 🐾",
+  "Too low, puppy lover! My tail wags warmer than that guess! 🐶",
+  "Way too low! Did you drop your bone or just your standards? 😉"
 ];
 
 const highRoasts = [
-  "Way too high! Calm down, astronaut, we haven't built the rocket yet! 🚀",
-  "Too high! You're reaching almost as high as my love for you 💕",
-  "Way too high! Dial it back down to cozy mode, cutie! 🥰"
+  "Way too high! Calm down, guard dog, we aren't chasing the mailman yet! 🐕",
+  "Too high! You're reaching almost as high as a puppy jumping for treats 💕",
+  "Way too high! Dial it back down to cozy nap mode, cutie! 🥰"
 ];
 
 const closeRoasts = [
-  "Ooooh! So ridiculously close I can almost taste the victory! 🔥",
-  "So close! My heart skipped a beat thinking you got it! 💓"
+  "Ooooh! So ridiculously close I can hear the happy tail wags! 🐕‍🦺",
+  "So close! My puppy heart skipped a beat thinking you found the bone! 💓"
 ];
 
 function lockSecretNumber() {
   if (!myDuelRole) return alert("Please select whether you are Aryan or Teresa first! ✨");
   const val = parseInt(document.getElementById('secret-input').value);
-  if (isNaN(val) || val < 1 || val > 100) return alert("Enter a valid number between 1 and 100! 💖");
+  if (isNaN(val) || val < 1 || val > 100) return alert("Enter a valid number between 1 and 100! 🦴");
 
   playSound('click');
   const updateObj = {};
@@ -414,7 +535,7 @@ function lockSecretNumber() {
   if (!duelData.currentTurn) updateObj.currentTurn = 'Aryan';
 
   roomRef.child('secretDuel').update(updateObj);
-  document.getElementById('secret-status').innerText = "Status: Secret number locked! Waiting for partner... 🔒";
+  document.getElementById('secret-status').innerText = "Status: Secret bone hidden! Waiting for partner... 🔒";
 }
 
 function submitDuelGuess() {
@@ -422,10 +543,10 @@ function submitDuelGuess() {
   const turn = duelData.currentTurn || 'Aryan';
 
   if (duelData.winner) return alert("The game is over! Reset to play again. 💖");
-  if (turn !== myDuelRole) return alert(`It's ${turn}'s turn to guess! ⏳`);
+  if (turn !== myDuelRole) return alert(`It's ${turn}'s turn to sniff! ⏳`);
 
   const guessVal = parseInt(document.getElementById('guess-input').value);
-  if (isNaN(guessVal) || guessVal < 1 || guessVal > 100) return alert("Enter a valid number between 1 and 100! 💖");
+  if (isNaN(guessVal) || guessVal < 1 || guessVal > 100) return alert("Enter a valid number between 1 and 100! 🦴");
 
   const target = myDuelRole === 'Aryan' ? duelData.teresaSecret : duelData.aryanSecret;
   const nextTurn = myDuelRole === 'Aryan' ? 'Teresa' : 'Aryan';
@@ -433,22 +554,22 @@ function submitDuelGuess() {
   const difference = Math.abs(guessVal - target);
 
   if (guessVal === target) {
-    feedbackText = `🎉 ${myDuelRole} guessed ${guessVal} perfectly and WINS! So proud of you! 💕`;
+    feedbackText = `🎉 ${myDuelRole} sniffed out ${guessVal} perfectly and WINS! Good puppy! 🐶💕`;
     hint = "CORRECT 🎉";
     winner = myDuelRole;
     playSound('win');
   } else if (difference <= 5) {
     const randomClose = closeRoasts[Math.floor(Math.random() * closeRoasts.length)];
     const direction = guessVal < target ? "Higher 📈" : "Lower 📉";
-    feedbackText = `${myDuelRole} guessed ${guessVal} — ${randomClose} (Go ${direction})`;
+    feedbackText = `${myDuelRole} sniffed ${guessVal} — ${randomClose} (Go ${direction})`;
     hint = `So Close! (${direction})`;
     playSound('wrong');
   } else if (guessVal < target) {
-    feedbackText = `${myDuelRole} guessed ${guessVal} — ${lowRoasts[Math.floor(Math.random() * lowRoasts.length)]}`;
+    feedbackText = `${myDuelRole} sniffed ${guessVal} — ${lowRoasts[Math.floor(Math.random() * lowRoasts.length)]}`;
     hint = "Too Low 📉";
     playSound('wrong');
   } else {
-    feedbackText = `${myDuelRole} guessed ${guessVal} — ${highRoasts[Math.floor(Math.random() * highRoasts.length)]}`;
+    feedbackText = `${myDuelRole} sniffed ${guessVal} — ${highRoasts[Math.floor(Math.random() * highRoasts.length)]}`;
     hint = "Too High 🚀";
     playSound('wrong');
   }
@@ -512,9 +633,9 @@ function updateDuelUI() {
     } else {
       document.getElementById('secret-reveal-box').classList.add('hidden-section');
       if (turn === myDuelRole) {
-        document.getElementById('turn-indicator').innerText = `Make your guess! ✨`;
+        document.getElementById('turn-indicator').innerText = `Time to sniff and guess! 🐶`;
       } else {
-        document.getElementById('turn-indicator').innerText = `Waiting for ${turn} to guess... ⏳`;
+        document.getElementById('turn-indicator').innerText = `Waiting for ${turn} to sniff... ⏳`;
       }
     }
   } else {
@@ -524,7 +645,7 @@ function updateDuelUI() {
 
     const myLocked = (myDuelRole === 'Aryan' && aryanReady) || (myDuelRole === 'Teresa' && teresaReady);
     if (myLocked) {
-      document.getElementById('secret-status').innerText = "Status: Secret number locked! Waiting for partner... 🔒";
+      document.getElementById('secret-status').innerText = "Status: Secret bone hidden! Waiting for partner... 🔒";
     } else {
       document.getElementById('secret-status').innerText = `Aryan Ready: ${aryanReady ? '✅' : '❌'} | Teresa Ready: ${teresaReady ? '✅' : '❌'}`;
     }
@@ -545,7 +666,7 @@ function resetDuelGame() {
     aryanSecret: null,
     teresaSecret: null,
     currentTurn: 'Aryan',
-    feedback: 'Game Reset! Lock in your secret numbers. ✨',
+    feedback: 'Game Reset! Hide your secret bones. 🦴',
     winner: null,
     aryanHistory: [],
     teresaHistory: []
@@ -576,7 +697,7 @@ function syncVideoElements(mode) {
 
 async function startCall() {
   playSound('click');
-  document.querySelectorAll('.call-btn').forEach(btn => btn.innerText = "Connecting... 💖");
+  document.querySelectorAll('.call-btn').forEach(btn => btn.innerText = "Connecting... 🐶");
 
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -609,7 +730,7 @@ async function startCall() {
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
             roomRef.child('signals/answer').set({ type: answer.type, sdp: answer.sdp });
-            document.querySelectorAll('.call-btn').forEach(btn => btn.innerText = "Connected! 💖");
+            document.querySelectorAll('.call-btn').forEach(btn => btn.innerText = "Connected! 🐾");
           }
         });
       }
@@ -619,7 +740,7 @@ async function startCall() {
       const answer = snapshot.val();
       if (answer && isInitiator && !peerConnection.currentRemoteDescription) {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-        document.querySelectorAll('.call-btn').forEach(btn => btn.innerText = "Connected! 💖");
+        document.querySelectorAll('.call-btn').forEach(btn => btn.innerText = "Connected! 🐾");
       }
     });
 

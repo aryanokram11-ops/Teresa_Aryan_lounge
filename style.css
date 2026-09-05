@@ -20,7 +20,7 @@ body {
   overflow-x: hidden;
 }
 
-/* Floating Hearts Background Animation */
+/* Floating Background Hearts & Paws Animation */
 .floating-hearts-bg {
   position: fixed;
   top: 0;
@@ -34,15 +34,15 @@ body {
 
 .heart-particle {
   position: absolute;
-  color: rgba(255, 107, 129, 0.2);
-  font-size: 20px;
+  color: rgba(255, 107, 129, 0.25);
+  font-size: 22px;
   animation: floatUp 8s linear infinite;
 }
 
 @keyframes floatUp {
   0% { transform: translateY(100vh) scale(0.6) rotate(0deg); opacity: 0; }
-  20% { opacity: 0.8; }
-  80% { opacity: 0.8; }
+  20% { opacity: 0.85; }
+  80% { opacity: 0.85; }
   100% { transform: translateY(-10vh) scale(1.3) rotate(360deg); opacity: 0; }
 }
 
@@ -159,7 +159,7 @@ section {
   border: 2px dashed #ffb8b8;
 }
 
-.video-container {
+.video-container, .video-responsive-container {
   position: relative;
   width: 100%;
   padding-bottom: 56.25%;
@@ -170,7 +170,7 @@ section {
   border: 3px solid #ffb8b8;
 }
 
-.video-container iframe {
+.video-container iframe, .video-responsive-container iframe {
   position: absolute;
   top: 0;
   left: 0;
@@ -179,7 +179,6 @@ section {
   border: none;
 }
 
-/* Embedded Chat Slot Style (Inside Mini-Games) */
 .embedded-chat-slot {
   background: linear-gradient(135deg, #fff5f7 0%, #fff0f3 100%);
   border: 3px solid #ffb8b8;
@@ -433,7 +432,6 @@ section {
   padding: 12px;
 }
 
-/* Floating Video & Voice Chat Widget (Used outside Mini-Games) */
 .video-chat-box {
   position: fixed;
   bottom: 20px;
