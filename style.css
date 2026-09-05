@@ -78,7 +78,7 @@ main {
   border: none;
 }
 
-.multiplayer-box {
+.multiplayer-box, .duel-box {
   background: white;
   padding: 15px;
   border-radius: 10px;
@@ -91,14 +91,14 @@ main {
   margin-bottom: 12px;
 }
 
-.multiplayer-box input, .guess-controls input {
+.multiplayer-box input, .guess-controls input, .duel-box input {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 5px;
   margin-right: 5px;
 }
 
-.multiplayer-box button, .guess-controls button, .game-card button {
+.multiplayer-box button, .guess-controls button, .game-card button, .duel-box button {
   background: var(--primary);
   color: white;
   border: none;
@@ -107,13 +107,12 @@ main {
   cursor: pointer;
 }
 
-#room-status, #guess-feedback {
+#room-status, #guess-feedback, #secret-status, #turn-indicator {
   color: var(--primary);
   font-weight: bold;
   font-size: 1.1rem;
 }
 
-/* Game Selection Menu Cards */
 #game-selection-menu {
   text-align: center;
 }
@@ -150,7 +149,6 @@ main {
   color: #57606f;
 }
 
-/* Game Screens */
 .game-screen {
   text-align: center;
 }

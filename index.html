@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Our Lounge</title>
   <link rel="stylesheet" href="style.css">
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
@@ -18,6 +19,7 @@
   </header>
 
   <main>
+    <!-- Watch Party Section -->
     <section id="movies" class="active-section">
       <h2>Movie Time</h2>
       <div class="video-container">
@@ -25,7 +27,9 @@
       </div>
     </section>
 
+    <!-- Mini Games Main Hub -->
     <section id="games-hub" class="hidden-section">
+      <!-- Shared Room Setup -->
       <div class="multiplayer-box">
         <div class="room-row">
           <label for="room-input"><b>Room Code:</b></label>
@@ -35,6 +39,7 @@
         <p id="room-status">Connected to room: love-lounge</p>
       </div>
 
+      <!-- Games Selection List -->
       <div id="game-selection-menu">
         <h2>Choose a Game</h2>
         <div class="game-list">
@@ -44,13 +49,14 @@
             <button type="button">Play Game</button>
           </div>
           <div class="game-card" onclick="selectGame('guessing')">
-            <h3>🔢 Number Guessing</h3>
-            <p>Try to guess the secret target number from 1 to 100.</p>
+            <h3>🔢 Secret Number Duel</h3>
+            <p>Set a secret number for each other and race to guess it first!</p>
             <button type="button">Play Game</button>
           </div>
         </div>
       </div>
 
+      <!-- Tic-Tac-Toe Game Screen -->
       <div id="tictactoe-game" class="game-screen hidden-section">
         <button type="button" class="back-btn" onclick="backToGameList()">← Back to Games Menu</button>
         <h2>Real-Time Tic-Tac-Toe</h2>
@@ -77,20 +83,40 @@
         <button type="button" class="reset-btn" onclick="resetGame()">Restart Game</button>
       </div>
 
+      <!-- Secret Number Duel Screen -->
       <div id="guessing-game" class="game-screen hidden-section">
         <button type="button" class="back-btn" onclick="backToGameList()">← Back to Games Menu</button>
-        <h2>Number Guessing Game</h2>
-        <p>Target Number is between 1 and 100!</p>
+        <h2>Secret Number Duel</h2>
 
-        <div class="guess-controls">
-          <input type="number" id="guess-input" placeholder="Enter number (1-100)" min="1" max="100">
-          <button type="button" onclick="submitGuess()">Submit Guess</button>
+        <div class="role-row">
+          <span>Who are you? </span>
+          <button type="button" onclick="setDuelPlayer('Aryan')">Aryan</button>
+          <button type="button" onclick="setDuelPlayer('Teresa')">Teresa</button>
+        </div>
+        <p id="duel-identity">You are playing as: Aryan</p>
+
+        <!-- Phase 1: Set Numbers -->
+        <div id="set-number-box" class="duel-box">
+          <h3>Step 1: Set Your Secret Number (1-100)</h3>
+          <input type="password" id="secret-input" placeholder="Your Secret Number">
+          <button type="button" onclick="lockSecretNumber()">Lock Secret Number</button>
+          <p id="secret-status">Status: Waiting for both players to lock numbers...</p>
         </div>
 
-        <p id="guess-feedback">Waiting for a guess...</p>
-        <p id="guess-count">Total Guesses: 0</p>
+        <!-- Phase 2: Guessing Duel -->
+        <div id="guess-duel-box" class="duel-box hidden-section">
+          <h3>Step 2: Guessing Phase</h3>
+          <p id="turn-indicator">Waiting for both players to lock numbers...</p>
 
-        <button type="button" class="reset-btn" onclick="resetGuessingGame()">New Target Number</button>
+          <div class="guess-controls">
+            <input type="number" id="guess-input" placeholder="Enter guess (1-100)" min="1" max="100">
+            <button type="button" onclick="submitDuelGuess()">Submit Guess</button>
+          </div>
+
+          <p id="guess-feedback">No guesses made yet.</p>
+        </div>
+
+        <button type="button" class="reset-btn" onclick="resetDuelGame()">Reset Secret Duel</button>
       </div>
     </section>
   </main>

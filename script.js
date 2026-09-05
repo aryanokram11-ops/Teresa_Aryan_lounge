@@ -23,7 +23,7 @@ function backToGameList() {
   document.getElementById('game-selection-menu').classList.remove('hidden-section');
 }
 
-// Firebase Config
+// Firebase Configuration
 const firebaseConfig = {
   databaseURL: "https://assistant-98715-default-rtdb.firebaseio.com"
 };
@@ -48,14 +48,24 @@ const winningConditions = [
   [0, 4, 8], [2, 4, 6]
 ];
 
-// Number Guessing State
-let targetNumber = Math.floor(Math.random() * 100) + 1;
-let guessCount = 0;
-let guessFeedback = "Waiting for first guess...";
+// Secret Number Duel State
+let myDuelRole = 'Aryan';
+let duelData = {
+  aryanSecret: null,
+  teresaSecret: null,
+  currentTurn: 'Aryan',
+  feedback: 'Set your secret numbers to begin!',
+  winner: null
+};
 
 function setRole(role) {
   myRole = role;
   document.getElementById('role-display').innerText = `You are playing as: ${myRole}`;
+}
+
+function setDuelPlayer(role) {
+  myDuelRole = role;
+  document.getElementById('duel-identity').innerText = `You are playing as: ${role}`;
 }
 
 function listenToRoom() {
@@ -71,11 +81,9 @@ function listenToRoom() {
         checkResult();
       }
 
-      if (data.numberGame) {
-        targetNumber = data.numberGame.targetNumber;
-        guessCount = data.numberGame.guessCount || 0;
-        guessFeedback = data.numberGame.guessFeedback || "Waiting for first guess...";
-        updateGuessingUI();
+      if (data.secretDuel) {
+        duelData = data.secretDuel;
+        updateDuelUI();
       }
     }
   });
@@ -92,7 +100,7 @@ function joinRoom() {
   listenToRoom();
 }
 
-// Tic-Tac-Toe
+// Tic-Tac-Toe Functions
 function makeMove(index) {
   if (boardState[index] !== '' || !gameActive) return;
   if (currentPlayer !== myRole) return alert(`It's Player ${currentPlayer}'s turn! You are Player ${myRole}.`);
@@ -148,45 +156,80 @@ function resetGame() {
   });
 }
 
-// Number Guessing
-function submitGuess() {
-  const inputEl = document.getElementById('guess-input');
-  const val = parseInt(inputEl.value);
+// Secret Number Duel Functions
+function lockSecretNumber() {
+  const val = parseInt(document.getElementById('secret-input').value);
+  if (isNaN(val) || val < 1 || val > 100) return alert("Enter a valid number between 1 and 100!");
 
-  if (isNaN(val) || val < 1 || val > 100) {
-    return alert("Please enter a valid number between 1 and 100!");
-  }
+  const updateObj = {};
+  if (myDuelRole === 'Aryan') updateObj.aryanSecret = val;
+  else updateObj.teresaSecret = val;
 
-  guessCount++;
-  if (val === targetNumber) {
-    guessFeedback = `🎉 Correct! The number was ${targetNumber}!`;
-  } else if (val < targetNumber) {
-    guessFeedback = `📈 Too Low! (Guessed: ${val})`;
+  roomRef.child('secretDuel').update(updateObj);
+  document.getElementById('secret-status').innerText = "Status: Secret number locked! Waiting for partner...";
+}
+
+function submitDuelGuess() {
+  if (duelData.winner) return alert("The game is over! Reset to play again.");
+  if (duelData.currentTurn !== myDuelRole) return alert(`It's ${duelData.currentTurn}'s turn to guess!`);
+
+  const guessVal = parseInt(document.getElementById('guess-input').value);
+  if (isNaN(guessVal) || guessVal < 1 || guessVal > 100) return alert("Enter a valid number between 1 and 100!");
+
+  const target = myDuelRole === 'Aryan' ? duelData.teresaSecret : duelData.aryanSecret;
+  const nextTurn = myDuelRole === 'Aryan' ? 'Teresa' : 'Aryan';
+  let feedbackText = "";
+  let winner = null;
+
+  if (guessVal === target) {
+    feedbackText = `🎉 ${myDuelRole} guessed ${guessVal} correctly and WINS! 💕`;
+    winner = myDuelRole;
+  } else if (guessVal < target) {
+    feedbackText = `${myDuelRole} guessed ${guessVal} — Too Low!`;
   } else {
-    guessFeedback = `📉 Too High! (Guessed: ${val})`;
+    feedbackText = `${myDuelRole} guessed ${guessVal} — Too High!`;
   }
 
-  inputEl.value = '';
+  document.getElementById('guess-input').value = '';
 
-  roomRef.child('numberGame').set({
-    targetNumber: targetNumber,
-    guessCount: guessCount,
-    guessFeedback: guessFeedback
+  roomRef.child('secretDuel').update({
+    currentTurn: winner ? duelData.currentTurn : nextTurn,
+    feedback: feedbackText,
+    winner: winner
   });
 }
 
-function updateGuessingUI() {
-  document.getElementById('guess-feedback').innerText = guessFeedback;
-  document.getElementById('guess-count').innerText = `Total Guesses: ${guessCount}`;
+function updateDuelUI() {
+  const aryanReady = duelData.aryanSecret !== undefined && duelData.aryanSecret !== null;
+  const teresaReady = duelData.teresaSecret !== undefined && duelData.teresaSecret !== null;
+
+  if (aryanReady && teresaReady) {
+    document.getElementById('set-number-box').classList.add('hidden-section');
+    document.getElementById('guess-duel-box').classList.remove('hidden-section');
+
+    if (duelData.winner) {
+      document.getElementById('turn-indicator').innerText = `Game Over! 🎉 ${duelData.winner} Wins!`;
+    } else {
+      document.getElementById('turn-indicator').innerText = `Turn: ${duelData.currentTurn}'s turn to guess!`;
+    }
+  } else {
+    document.getElementById('set-number-box').classList.remove('hidden-section');
+    document.getElementById('guess-duel-box').classList.add('hidden-section');
+    document.getElementById('secret-status').innerText = `Aryan Ready: ${aryanReady ? '✅' : '❌'} | Teresa Ready: ${teresaReady ? '✅' : '❌'}`;
+  }
+
+  document.getElementById('guess-feedback').innerText = duelData.feedback || 'No guesses made yet.';
 }
 
-function resetGuessingGame() {
-  const newTarget = Math.floor(Math.random() * 100) + 1;
-  roomRef.child('numberGame').set({
-    targetNumber: newTarget,
-    guessCount: 0,
-    guessFeedback: "Game Reset! Try to guess the new number (1-100)."
+function resetDuelGame() {
+  roomRef.child('secretDuel').set({
+    aryanSecret: null,
+    teresaSecret: null,
+    currentTurn: 'Aryan',
+    feedback: 'Game Reset! Lock in your secret numbers.',
+    winner: null
   });
+  document.getElementById('secret-input').value = '';
 }
 
 listenToRoom();
