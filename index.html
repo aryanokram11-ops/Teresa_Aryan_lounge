@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Puppy Love Lounge & Watch Party 🐾💖</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://www.www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 
+  <!-- Floating Hearts Background -->
   <div id="hearts-bg"></div>
 
   <header>
@@ -35,6 +36,7 @@
   </header>
 
   <main>
+    <!-- ================= WATCH PARTY TAB ================= -->
     <section id="watch-party-hub" class="active-section">
       
       <div class="watchparty-header-bar">
@@ -49,14 +51,12 @@
       </div>
 
       <div class="watchparty-workspace">
-        
         <div class="video-player-main-container">
           <div id="youtube-player"></div>
           <div id="non-host-shield" class="hidden-section" title="Only the current Host can control playback!"></div>
         </div>
 
         <div class="watchparty-sidebar">
-          
           <div class="sidebar-widget video-call-widget">
             <h3>📹 Live Video & Voice Call</h3>
             <div class="video-grids">
@@ -76,6 +76,7 @@
             </div>
           </div>
 
+          <!-- FIXED CHAT WIDGET -->
           <div class="sidebar-widget chat-widget">
             <h3>💬 Love Chat & Media</h3>
             <div id="chat-messages-container"></div>
@@ -86,11 +87,11 @@
               <button onclick="sendChatMessage()">Send 💕</button>
             </div>
           </div>
-
         </div>
       </div>
     </section>
 
+    <!-- ================= GAMES ARCADE TAB ================= -->
     <section id="games-hub" class="hidden-section">
       <div id="game-selection-menu">
         <h2>Choose a Date Night Game! 🐾</h2>
@@ -183,6 +184,7 @@
     </section>
   </main>
 
+  <!-- ================= ROCK PAPER SCISSORS MODAL ================= -->
   <div id="rps-modal" class="modal-overlay hidden-section">
     <div class="modal-content">
       <h2>⚔️ Rock Paper Scissors Battle</h2>

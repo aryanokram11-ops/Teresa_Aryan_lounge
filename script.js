@@ -154,7 +154,6 @@ function onPlayerReady(event) {
 
 function onPlayerStateChange(event) {
   if (isSyncingFromRemote) return;
-  // Only the host can trigger playback sync updates
   if (currentHostId !== myClientId) return;
 
   const currentTime = player.getCurrentTime();
@@ -250,7 +249,6 @@ function checkRpsOutcome(rpsData) {
     winnerId = p2.id;
   }
 
-  // Set winner as host in Firebase
   roomRef.child('hostId').set(winnerId);
   const resultMsg = winnerId === myClientId ? "🎉 You won RPS and became the Host! 👑" : "😢 Partner won RPS and is the Host.";
   document.getElementById('rps-result-display').innerText = resultMsg;
@@ -258,7 +256,7 @@ function checkRpsOutcome(rpsData) {
 
   setTimeout(() => {
     closeRpsModal();
-    roomRef.child('rps').remove(); // clear rps round
+    roomRef.child('rps').remove();
   }, 2000);
 }
 
@@ -316,7 +314,6 @@ function listenToRoom() {
         statusEl.style.color = "#ff6b81";
       }
 
-      // Host updates
       currentHostId = data.hostId || null;
       const hostBadge = document.getElementById('host-badge');
       const nonHostShield = document.getElementById('non-host-shield');
@@ -332,12 +329,10 @@ function listenToRoom() {
         nonHostShield.classList.add('hidden-section');
       }
 
-      // RPS updates
       if (data.rps) {
         checkRpsOutcome(data.rps);
       }
 
-      // Tic-Tac-Toe
       if (data.ticTacToe) {
         boardState = data.ticTacToe.boardState || ['', '', '', '', '', '', '', '', ''];
         currentPlayer = data.ticTacToe.currentPlayer || 'X';
@@ -346,13 +341,11 @@ function listenToRoom() {
         checkResult();
       }
 
-      // Secret Duel
       if (data.secretDuel) {
         duelData = data.secretDuel;
         updateDuelUI();
       }
 
-      // Watch Party Teleparty Sync
       if (data.watchParty && player && typeof player.loadVideoById === 'function') {
         const wp = data.watchParty;
         if (wp.updatedBy && wp.updatedBy !== myClientId) {
@@ -384,7 +377,7 @@ function listenToRoom() {
     }
   });
 
-  // Chat message listener
+  roomRef.child('chatMessages').off();
   roomRef.child('chatMessages').on('child_added', (snapshot) => {
     const msg = snapshot.val();
     appendChatMessage(msg);
@@ -465,7 +458,7 @@ function appendChatMessage(msg) {
   container.scrollTop = container.scrollHeight;
 }
 
-// ================= GAME FUNCTIONS (Tic-Tac-Toe & Secret Duel) =================
+// ================= GAME FUNCTIONS =================
 function setRole(role) {
   playSound('click');
   myRole = role;
