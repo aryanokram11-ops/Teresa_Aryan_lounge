@@ -31,6 +31,12 @@
       <!-- Connection Controls -->
       <div class="multiplayer-box">
         <p>Your ID: <b id="my-id">Generating...</b></p>
+        <div style="margin-bottom: 10px;">
+          <span>Pick your symbol: </span>
+          <button onclick="setRole('X')">Play as X</button>
+          <button onclick="setRole('O')">Play as O</button>
+        </div>
+        <p id="role-display">You are playing as: X</p>
         <input type="text" id="partner-id" placeholder="Paste partner ID here">
         <button onclick="connectToPartner()">Connect</button>
         <p id="connection-status">Status: Disconnected</p>
