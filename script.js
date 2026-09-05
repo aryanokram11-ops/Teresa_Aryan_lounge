@@ -1,16 +1,30 @@
-// Dynamic Floating Background Hearts & Paws Generator
+// Theme Manager & Persistence
+function toggleTheme() {
+  playSound('click');
+  const htmlEl = document.documentElement;
+  const currentTheme = htmlEl.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  htmlEl.setAttribute('data-theme', newTheme);
+  localStorage.setItem('lounge_theme', newTheme);
+  document.getElementById('theme-toggle-btn').innerText = newTheme === 'dark' ? '☀️' : '🌙';
+}
+
 window.addEventListener('DOMContentLoaded', () => {
+  const savedTheme = localStorage.getItem('lounge_theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  document.getElementById('theme-toggle-btn').innerText = savedTheme === 'dark' ? '☀️' : '🌙';
+
   const heartsBg = document.getElementById('hearts-bg');
   const symbols = ['🐶', '🐾', '💖', '🦴', '✨', '💕', '🐕', '❤️'];
   
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 18; i++) {
     const item = document.createElement('div');
     item.className = 'heart-particle';
     item.innerText = symbols[Math.floor(Math.random() * symbols.length)];
     item.style.left = Math.random() * 100 + 'vw';
     item.style.animationDuration = (6 + Math.random() * 6) + 's';
     item.style.animationDelay = (Math.random() * 5) + 's';
-    item.style.fontSize = (18 + Math.random() * 18) + 'px';
+    item.style.fontSize = (16 + Math.random() * 16) + 'px';
     heartsBg.appendChild(item);
   }
 
@@ -54,7 +68,7 @@ function playSound(type) {
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(600, now);
     osc.frequency.exponentialRampToValueAtTime(1200, now + 0.08);
-    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.setValueAtTime(0.2, now);
     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
@@ -68,7 +82,7 @@ function playSound(type) {
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(freq, now + idx * 0.08);
       osc.frequency.linearRampToValueAtTime(freq + 100, now + idx * 0.08 + 0.05);
-      gain.gain.setValueAtTime(0.2, now + idx * 0.08);
+      gain.gain.setValueAtTime(0.15, now + idx * 0.08);
       gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.08 + 0.07);
       osc.connect(gain);
       gain.connect(audioCtx.destination);
@@ -81,7 +95,7 @@ function playSound(type) {
     osc.type = 'sine';
     osc.frequency.setValueAtTime(350, now);
     osc.frequency.linearRampToValueAtTime(150, now + 0.35);
-    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.setValueAtTime(0.2, now);
     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
@@ -120,7 +134,7 @@ function backToGameList() {
   document.getElementById('game-selection-menu').classList.remove('hidden-section');
 }
 
-// ================= YOUTUBE & HOST STATE (NO DEFAULT VIDEO LOADED) =================
+// ================= YOUTUBE & HOST STATE =================
 const tag = document.createElement('script');
 tag.src = "https://www.youtube.com/iframe_api";
 const firstScriptTag = document.getElementsByTagName('script')[0];
@@ -137,6 +151,7 @@ function onYouTubeIframeAPIReady() {
     playerVars: {
       'playsinline': 1,
       'controls': 1,
+      'fs': 1,
       'autoplay': 0,
       'enablejsapi': 1
     },
@@ -148,7 +163,7 @@ function onYouTubeIframeAPIReady() {
 }
 
 function onPlayerReady(event) {
-  console.log("YouTube Player Ready. Waiting for user to load a video.");
+  console.log("YouTube Player Ready.");
 }
 
 function onPlayerStateChange(event) {
@@ -204,7 +219,7 @@ function loadPastedVideo() {
   }
 }
 
-// ================= ROCK PAPER SCISSORS HOST BATTLE & FIXED MODAL =================
+// ================= ROCK PAPER SCISSORS HOST BATTLE =================
 function openRpsModal() {
   playSound('click');
   document.getElementById('rps-modal').classList.remove('hidden-section');
@@ -280,7 +295,6 @@ if (!myClientId) {
   localStorage.setItem('lounge_client_id', myClientId);
 }
 
-// Game states
 let myRole = localStorage.getItem('lounge_ttt_role') || null;
 let boardState = ['', '', '', '', '', '', '', '', ''];
 let currentPlayer = 'X';
@@ -310,8 +324,8 @@ function listenToRoom() {
         statusEl.innerText = `Puppy Partner Connected! 🐶🐾`;
         statusEl.style.color = "#2ed573";
       } else {
-        statusEl.innerText = `Waiting for puppy partner to join... ⏳🐕`;
-        statusEl.style.color = "#ff6b81";
+        statusEl.innerText = `Waiting for puppy partner... ⏳🐕`;
+        statusEl.style.color = "var(--primary-pink)";
       }
 
       currentHostId = data.hostId || null;
@@ -319,19 +333,17 @@ function listenToRoom() {
       const nonHostShield = document.getElementById('non-host-shield');
 
       if (currentHostId === myClientId) {
-        hostBadge.innerText = "👑 Host: You (You control video!)";
+        hostBadge.innerText = "👑 Host: You";
         nonHostShield.classList.add('hidden-section');
       } else if (currentHostId) {
         hostBadge.innerText = "👑 Host: Partner";
         nonHostShield.classList.remove('hidden-section');
       } else {
-        hostBadge.innerText = "👑 Host: Not Decided (Play RPS!)";
+        hostBadge.innerText = "👑 Host: Not Decided";
         nonHostShield.classList.add('hidden-section');
       }
 
-      if (data.rps) {
-        checkRpsOutcome(data.rps);
-      }
+      if (data.rps) checkRpsOutcome(data.rps);
 
       if (data.ticTacToe) {
         boardState = data.ticTacToe.boardState || ['', '', '', '', '', '', '', '', ''];
@@ -362,25 +374,21 @@ function listenToRoom() {
               player.seekTo(targetTime, true);
             }
 
-            if (wp.action === 'PLAY') {
-              player.playVideo();
-            } else if (wp.action === 'PAUSE') {
-              player.pauseVideo();
-            }
+            if (wp.action === 'PLAY') player.playVideo();
+            else if (wp.action === 'PAUSE') player.pauseVideo();
           }
 
           setTimeout(() => { isSyncingFromRemote = false; }, 400);
         }
       }
     } else {
-      document.getElementById('room-status').innerText = `Waiting for puppy partner to join... ⏳🐕`;
+      document.getElementById('room-status').innerText = `Waiting for puppy partner... ⏳🐕`;
     }
   });
 
   roomRef.child('chatMessages').off();
   roomRef.child('chatMessages').on('child_added', (snapshot) => {
-    const msg = snapshot.val();
-    appendChatMessage(msg);
+    appendChatMessage(snapshot.val());
   });
 }
 
@@ -393,11 +401,8 @@ function joinRoom(isAuto = false) {
   localStorage.setItem('lounge_partner_code', currentPartnerCode);
   roomRef = db.ref('rooms/' + currentPartnerCode);
   
-  // RESET CHAT BOX ON ROOM SWITCH
   const chatContainer = document.getElementById('chat-messages-container');
-  if (chatContainer) {
-    chatContainer.innerHTML = '';
-  }
+  if (chatContainer) chatContainer.innerHTML = '';
   
   document.getElementById('room-input-row').classList.add('hidden-section');
   document.getElementById('room-connected-display').classList.remove('hidden-section');
@@ -438,10 +443,9 @@ function handleMediaUpload(event) {
 
   const reader = new FileReader();
   reader.onload = function(e) {
-    const base64Data = e.target.result;
     roomRef.child('chatMessages').push({
       sender: myClientId,
-      mediaUrl: base64Data,
+      mediaUrl: e.target.result,
       type: 'media',
       timestamp: firebase.database.ServerValue.TIMESTAMP
     });
@@ -455,7 +459,7 @@ function appendChatMessage(msg) {
   div.className = 'chat-msg' + (msg.sender === myClientId ? ' mine' : '');
 
   if (msg.type === 'media') {
-    div.innerHTML = `<img src="${msg.mediaUrl}" alt="Shared image/gif">`;
+    div.innerHTML = `<img src="${msg.mediaUrl}" alt="Shared image">`;
   } else {
     div.innerText = msg.text;
   }
@@ -497,8 +501,7 @@ function makeMove(index) {
   playSound('click');
   boardState[index] = currentPlayer;
   const nextPlayer = currentPlayer === 'X' ? 'O' : 'X';
-
-  roomRef.child('ticTacToe').set({ boardState, currentPlayer, gameActive });
+  roomRef.child('ticTacToe').set({ boardState, currentPlayer: nextPlayer, gameActive });
 }
 
 function updateUI() {
