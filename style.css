@@ -19,6 +19,8 @@ body {
 header {
   text-align: center;
   padding: 2rem 1rem 1rem;
+  position: relative;
+  z-index: 10;
 }
 
 h1 {
@@ -26,16 +28,22 @@ h1 {
   margin-bottom: 1rem;
 }
 
+nav {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
 nav button {
   background-color: var(--primary);
   color: white;
   border: none;
   padding: 10px 18px;
-  margin: 0 5px;
   border-radius: 20px;
   cursor: pointer;
   font-weight: bold;
   transition: transform 0.2s, background-color 0.2s;
+  pointer-events: auto;
 }
 
 nav button:hover {
@@ -47,12 +55,13 @@ main {
   width: 90%;
   max-width: 800px;
   margin-top: 1rem;
+  position: relative;
+  z-index: 1;
 }
 
-.hidden-section { display: none; }
-.active-section { display: block; }
+.hidden-section { display: none !important; }
+.active-section { display: block !important; }
 
-/* Video Styling */
 .video-container {
   position: relative;
   padding-bottom: 56.25%;
@@ -60,6 +69,7 @@ main {
   overflow: hidden;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 1;
 }
 
 .video-container iframe {
@@ -69,8 +79,42 @@ main {
   border: none;
 }
 
-/* Game Styling */
+.multiplayer-box {
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.room-row, .role-row {
+  margin-bottom: 12px;
+}
+
+.multiplayer-box input {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-right: 5px;
+}
+
+.multiplayer-box button {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#room-status {
+  color: var(--primary);
+  font-weight: bold;
+}
+
 #games { text-align: center; }
+
 .board {
   display: grid;
   grid-template-columns: repeat(3, 100px);
@@ -101,45 +145,4 @@ main {
   padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
-}
-
-/* Gallery Styling */
-.gallery {
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-}
-
-.card {
-  background: white;
-  padding: 15px;
-  border-radius: 10px;
-  text-align: center;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-}
-
-.placeholder-img {
-  width: 150px;
-  height: 150px;
-  background: #f1f2f6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  color: #a4b0be;
-}
-
-.multiplayer-box {
-  background: white;
-  padding: 15px;
-  border-radius: 10px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-.multiplayer-box input {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  margin-right: 5px;
 }

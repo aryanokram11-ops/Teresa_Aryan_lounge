@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Our Lounge</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Added PeerJS library -->
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
   <header>
     <h1>Our Little Lounge ❤️</h1>
     <nav>
-      <button onclick="showSection('movies')">🍿 Watch Party</button>
-      <button onclick="showSection('games')">🎮 Mini-Games</button>
+      <button type="button" onclick="showSection('movies')">🍿 Watch Party</button>
+      <button type="button" onclick="showSection('games')">🎮 Mini-Games</button>
     </nav>
   </header>
 
@@ -26,23 +26,26 @@
     </section>
 
     <section id="games" class="hidden-section">
-      <h2>Live Two-Player Tic-Tac-Toe</h2>
+      <h2>Real-Time Tic-Tac-Toe</h2>
       
-      <!-- Connection Controls -->
       <div class="multiplayer-box">
-        <p>Your ID: <b id="my-id">Generating...</b></p>
-        <div style="margin-bottom: 10px;">
-          <span>Pick your symbol: </span>
-          <button onclick="setRole('X')">Play as X</button>
-          <button onclick="setRole('O')">Play as O</button>
+        <div class="room-row">
+          <label for="room-input"><b>Room Code:</b></label>
+          <input type="text" id="room-input" value="love-lounge" placeholder="Enter room code">
+          <button type="button" onclick="joinRoom()">Join Room</button>
         </div>
+        
+        <div class="role-row">
+          <span>Pick your symbol: </span>
+          <button type="button" onclick="setRole('X')">Play as X</button>
+          <button type="button" onclick="setRole('O')">Play as O</button>
+        </div>
+        
         <p id="role-display">You are playing as: X</p>
-        <input type="text" id="partner-id" placeholder="Paste partner ID here">
-        <button onclick="connectToPartner()">Connect</button>
-        <p id="connection-status">Status: Disconnected</p>
+        <p id="room-status">Connected to room: love-lounge</p>
       </div>
 
-      <div id="status">Connect to start playing!</div>
+      <div id="status">Player X's Turn</div>
       <div class="board" id="board">
         <div class="cell" onclick="makeMove(0)"></div>
         <div class="cell" onclick="makeMove(1)"></div>
@@ -54,7 +57,7 @@
         <div class="cell" onclick="makeMove(7)"></div>
         <div class="cell" onclick="makeMove(8)"></div>
       </div>
-      <button class="reset-btn" onclick="resetGame()">Restart Game</button>
+      <button type="button" class="reset-btn" onclick="resetGame()">Restart Game</button>
     </section>
   </main>
 

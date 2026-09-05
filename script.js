@@ -1,17 +1,34 @@
 function showSection(sectionId) {
-  document.querySelectorAll('main > section').forEach(sec => {
-    sec.classList.add('hidden-section');
-    sec.classList.remove('active-section');
-  });
-  document.getElementById(sectionId).classList.remove('hidden-section');
-  document.getElementById(sectionId).classList.add('active-section');
+  const moviesSection = document.getElementById('movies');
+  const gamesSection = document.getElementById('games');
+
+  if (sectionId === 'movies') {
+    moviesSection.classList.add('active-section');
+    moviesSection.classList.remove('hidden-section');
+    gamesSection.classList.add('hidden-section');
+    gamesSection.classList.remove('active-section');
+  } else if (sectionId === 'games') {
+    gamesSection.classList.add('active-section');
+    gamesSection.classList.remove('hidden-section');
+    moviesSection.classList.add('hidden-section');
+    moviesSection.classList.remove('active-section');
+  }
 }
 
-// PeerJS Setup
-let peer = new Peer();
-let conn = null;
-let myRole = 'X'; // Default role
+// Database Config
+const firebaseConfig = {
+  databaseURL: "https://our-lounge-default-rtdb.firebaseio.com"
+};
 
+if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+
+const db = firebase.database();
+let currentRoomCode = "love-lounge";
+let roomRef = db.ref('rooms/' + currentRoomCode);
+
+let myRole = 'X';
 let boardState = ['', '', '', '', '', '', '', '', ''];
 let currentPlayer = 'X';
 let gameActive = true;
@@ -22,66 +39,55 @@ const winningConditions = [
   [0, 4, 8], [2, 4, 6]
 ];
 
-peer.on('open', (id) => {
-  document.getElementById('my-id').innerText = id;
-});
-
-peer.on('connection', (connection) => {
-  conn = connection;
-  setupConnection();
-});
-
 function setRole(role) {
   myRole = role;
   document.getElementById('role-display').innerText = `You are playing as: ${myRole}`;
 }
 
-function connectToPartner() {
-  const partnerId = document.getElementById('partner-id').value.trim();
-  if (!partnerId) return;
-  conn = peer.connect(partnerId);
-  setupConnection();
-}
-
-function setupConnection() {
-  document.getElementById('connection-status').innerText = "Status: Connected ❤️";
-  
-  conn.on('data', (data) => {
-    if (data.type === 'sync') {
-      boardState = data.boardState;
-      currentPlayer = data.currentPlayer;
-      gameActive = data.gameActive;
+function listenToRoom() {
+  roomRef.off();
+  roomRef.on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      boardState = data.boardState || ['', '', '', '', '', '', '', '', ''];
+      currentPlayer = data.currentPlayer || 'X';
+      gameActive = data.gameActive !== undefined ? data.gameActive : true;
       updateUI();
       checkResult();
     }
   });
 }
 
+function joinRoom() {
+  const inputCode = document.getElementById('room-input').value.trim();
+  if (!inputCode) {
+    alert("Please enter a room code!");
+    return;
+  }
+  
+  currentRoomCode = inputCode;
+  roomRef = db.ref('rooms/' + currentRoomCode);
+  
+  document.getElementById('room-status').innerText = `Connected to room: ${currentRoomCode}`;
+  listenToRoom();
+}
+
 function makeMove(index) {
   if (boardState[index] !== '' || !gameActive) return;
   
-  if (conn && currentPlayer !== myRole) {
+  if (currentPlayer !== myRole) {
     alert(`It's Player ${currentPlayer}'s turn! You are Player ${myRole}.`);
     return;
   }
 
   boardState[index] = currentPlayer;
-  currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+  const nextPlayer = currentPlayer === 'X' ? 'O' : 'X';
 
-  updateUI();
-  checkResult();
-  sendSync();
-}
-
-function sendSync() {
-  if (conn) {
-    conn.send({
-      type: 'sync',
-      boardState: boardState,
-      currentPlayer: currentPlayer,
-      gameActive: gameActive
-    });
-  }
+  roomRef.set({
+    boardState: boardState,
+    currentPlayer: nextPlayer,
+    gameActive: gameActive
+  });
 }
 
 function updateUI() {
@@ -119,10 +125,12 @@ function checkResult() {
 }
 
 function resetGame() {
-  boardState = ['', '', '', '', '', '', '', '', ''];
-  currentPlayer = 'X';
-  gameActive = true;
-  updateUI();
-  document.getElementById('status').innerText = "Game Restarted! Player X's Turn";
-  sendSync();
+  roomRef.set({
+    boardState: ['', '', '', '', '', '', '', '', ''],
+    currentPlayer: 'X',
+    gameActive: true
+  });
 }
+
+// Attach default room on boot
+listenToRoom();
