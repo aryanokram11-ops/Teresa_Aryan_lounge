@@ -10,40 +10,49 @@ function toggleTheme() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  const savedTheme = localStorage.getItem('lounge_theme') || 'light';
+  const savedTheme = localStorage.getItem('lounge_theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
   document.getElementById('theme-toggle-btn').innerText = savedTheme === 'dark' ? '☀️' : '🌙';
 
   const heartsBg = document.getElementById('hearts-bg');
   const symbols = ['🐶', '🐾', '💖', '🦴', '✨', '💕', '🐕', '❤️'];
   
-  for (let i = 0; i < 18; i++) {
-    const item = document.createElement('div');
-    item.className = 'heart-particle';
-    item.innerText = symbols[Math.floor(Math.random() * symbols.length)];
-    item.style.left = Math.random() * 100 + 'vw';
-    item.style.animationDuration = (6 + Math.random() * 6) + 's';
-    item.style.animationDelay = (Math.random() * 5) + 's';
-    item.style.fontSize = (16 + Math.random() * 16) + 'px';
-    heartsBg.appendChild(item);
+  if (heartsBg) {
+    for (let i = 0; i < 18; i++) {
+      const item = document.createElement('div');
+      item.className = 'heart-particle';
+      item.innerText = symbols[Math.floor(Math.random() * symbols.length)];
+      item.style.left = Math.random() * 100 + 'vw';
+      item.style.animationDuration = (6 + Math.random() * 6) + 's';
+      item.style.animationDelay = (Math.random() * 5) + 's';
+      item.style.fontSize = (16 + Math.random() * 16) + 'px';
+      heartsBg.appendChild(item);
+    }
   }
 
   if (myRole) {
-    document.getElementById('ttt-select-box').classList.add('hidden-section');
-    document.getElementById('ttt-locked-box').classList.remove('hidden-section');
-    document.getElementById('role-display').innerText = `You are playing as: ${myRole}`;
+    const tttSelect = document.getElementById('ttt-select-box');
+    const tttLocked = document.getElementById('ttt-locked-box');
+    const roleDisp = document.getElementById('role-display');
+    if (tttSelect) tttSelect.classList.add('hidden-section');
+    if (tttLocked) tttLocked.classList.remove('hidden-section');
+    if (roleDisp) roleDisp.innerText = `You are playing as: ${myRole}`;
   }
 
   if (myDuelRole) {
-    document.getElementById('duel-select-box').classList.add('hidden-section');
-    document.getElementById('duel-locked-box').classList.remove('hidden-section');
-    document.getElementById('duel-identity').innerText = `You are playing as: ${myDuelRole}`;
+    const duelSelect = document.getElementById('duel-select-box');
+    const duelLocked = document.getElementById('duel-locked-box');
+    const duelId = document.getElementById('duel-identity');
+    if (duelSelect) duelSelect.classList.add('hidden-section');
+    if (duelLocked) duelLocked.classList.remove('hidden-section');
+    if (duelId) duelId.innerText = `You are playing as: ${myDuelRole}`;
   }
 
   const savedCode = localStorage.getItem('lounge_partner_code');
   if (savedCode) {
     currentPartnerCode = savedCode;
-    document.getElementById('room-input').value = savedCode;
+    const roomInput = document.getElementById('room-input');
+    if (roomInput) roomInput.value = savedCode;
   }
 
   joinRoom(true);
@@ -112,33 +121,41 @@ function showSection(sectionId) {
   });
   
   const targetSection = document.getElementById(sectionId);
-  targetSection.classList.add('active-section');
-  targetSection.classList.remove('hidden-section');
+  if (targetSection) {
+    targetSection.classList.add('active-section');
+    targetSection.classList.remove('hidden-section');
+  }
 }
 
 function selectGame(gameId) {
   playSound('click');
-  document.getElementById('game-selection-menu').classList.add('hidden-section');
+  const menu = document.getElementById('game-selection-menu');
+  if (menu) menu.classList.add('hidden-section');
   document.querySelectorAll('.game-screen').forEach(screen => screen.classList.add('hidden-section'));
 
   if (gameId === 'tictactoe') {
-    document.getElementById('tictactoe-game').classList.remove('hidden-section');
+    const tttGame = document.getElementById('tictactoe-game');
+    if (tttGame) tttGame.classList.remove('hidden-section');
   } else if (gameId === 'guessing') {
-    document.getElementById('guessing-game').classList.remove('hidden-section');
+    const guessGame = document.getElementById('guessing-game');
+    if (guessGame) guessGame.classList.remove('hidden-section');
   }
 }
 
 function backToGameList() {
   playSound('click');
   document.querySelectorAll('.game-screen').forEach(screen => screen.classList.add('hidden-section'));
-  document.getElementById('game-selection-menu').classList.remove('hidden-section');
+  const menu = document.getElementById('game-selection-menu');
+  if (menu) menu.classList.remove('hidden-section');
 }
 
 // ================= YOUTUBE & HOST STATE =================
 const tag = document.createElement('script');
 tag.src = "https://www.youtube.com/iframe_api";
 const firstScriptTag = document.getElementsByTagName('script')[0];
-firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+if (firstScriptTag && firstScriptTag.parentNode) {
+  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+}
 
 let player;
 let isSyncingFromRemote = false;
@@ -200,12 +217,14 @@ function loadPastedVideo() {
     return alert("Only the current Host can load new videos! Win RPS to become host 👑");
   }
   playSound('click');
-  const urlInput = document.getElementById('video-url-input').value.trim();
+  const videoInput = document.getElementById('video-url-input');
+  if (!videoInput) return;
+  const urlInput = videoInput.value.trim();
   const videoId = extractVideoId(urlInput);
   
-  if (videoId) {
+  if (videoId && player && typeof player.loadVideoById === 'function') {
     player.loadVideoById(videoId);
-    document.getElementById('video-url-input').value = '';
+    videoInput.value = '';
 
     roomRef.child('watchParty').set({
       action: 'LOAD',
@@ -222,13 +241,16 @@ function loadPastedVideo() {
 // ================= ROCK PAPER SCISSORS HOST BATTLE =================
 function openRpsModal() {
   playSound('click');
-  document.getElementById('rps-modal').classList.remove('hidden-section');
-  document.getElementById('rps-result-display').innerText = "Make your choice to settle who hosts!";
+  const modal = document.getElementById('rps-modal');
+  const resDisplay = document.getElementById('rps-result-display');
+  if (modal) modal.classList.remove('hidden-section');
+  if (resDisplay) resDisplay.innerText = "Make your choice to settle who hosts!";
 }
 
 function closeRpsModal() {
   playSound('click');
-  document.getElementById('rps-modal').classList.add('hidden-section');
+  const modal = document.getElementById('rps-modal');
+  if (modal) modal.classList.add('hidden-section');
 }
 
 function playRps(myChoice) {
@@ -237,7 +259,8 @@ function playRps(myChoice) {
     choice: myChoice,
     timestamp: firebase.database.ServerValue.TIMESTAMP
   });
-  document.getElementById('rps-result-display').innerText = `You chose ${myChoice}. Waiting for partner... ⏳`;
+  const resDisplay = document.getElementById('rps-result-display');
+  if (resDisplay) resDisplay.innerText = `You chose ${myChoice}. Waiting for partner... ⏳`;
 }
 
 function checkRpsOutcome(rpsData) {
@@ -248,8 +271,9 @@ function checkRpsOutcome(rpsData) {
   const p1 = players[0];
   const p2 = players[1];
 
+  const resDisplay = document.getElementById('rps-result-display');
   if (p1.choice === p2.choice) {
-    document.getElementById('rps-result-display').innerText = `Both chose ${p1.choice}! It's a tie, play again! 🤝`;
+    if (resDisplay) resDisplay.innerText = `Both chose ${p1.choice}! It's a tie, play again! 🤝`;
     return;
   }
 
@@ -266,7 +290,7 @@ function checkRpsOutcome(rpsData) {
 
   roomRef.child('hostId').set(winnerId);
   const resultMsg = winnerId === myClientId ? "🎉 You won RPS and became the Host! 👑" : "😢 Partner won RPS and is the Host.";
-  document.getElementById('rps-result-display').innerText = resultMsg;
+  if (resDisplay) resDisplay.innerText = resultMsg;
   playSound('win');
 
   setTimeout(() => {
@@ -315,32 +339,36 @@ function listenToRoom() {
   roomRef.off();
   roomRef.on('value', (snapshot) => {
     const data = snapshot.val();
+    const statusEl = document.getElementById('room-status');
     if (data) {
       const presenceObj = data.presence || {};
       const activeCount = Object.keys(presenceObj).length;
-      const statusEl = document.getElementById('room-status');
 
-      if (activeCount >= 2) {
-        statusEl.innerText = `Puppy Partner Connected! 🐶🐾`;
-        statusEl.style.color = "#2ed573";
-      } else {
-        statusEl.innerText = `Waiting for puppy partner... ⏳🐕`;
-        statusEl.style.color = "var(--primary-pink)";
+      if (statusEl) {
+        if (activeCount >= 2) {
+          statusEl.innerText = `Puppy Partner Connected! 🐶🐾`;
+          statusEl.style.color = "#2ed573";
+        } else {
+          statusEl.innerText = `Waiting for puppy partner... ⏳🐕`;
+          statusEl.style.color = "var(--primary-pink)";
+        }
       }
 
       currentHostId = data.hostId || null;
       const hostBadge = document.getElementById('host-badge');
       const nonHostShield = document.getElementById('non-host-shield');
 
-      if (currentHostId === myClientId) {
-        hostBadge.innerText = "👑 Host: You";
-        nonHostShield.classList.add('hidden-section');
-      } else if (currentHostId) {
-        hostBadge.innerText = "👑 Host: Partner";
-        nonHostShield.classList.remove('hidden-section');
-      } else {
-        hostBadge.innerText = "👑 Host: Not Decided";
-        nonHostShield.classList.add('hidden-section');
+      if (hostBadge && nonHostShield) {
+        if (currentHostId === myClientId) {
+          hostBadge.innerText = "👑 Host: You";
+          nonHostShield.classList.add('hidden-section');
+        } else if (currentHostId) {
+          hostBadge.innerText = "👑 Host: Partner";
+          nonHostShield.classList.remove('hidden-section');
+        } else {
+          hostBadge.innerText = "👑 Host: Not Decided";
+          nonHostShield.classList.add('hidden-section');
+        }
       }
 
       if (data.rps) checkRpsOutcome(data.rps);
@@ -382,7 +410,7 @@ function listenToRoom() {
         }
       }
     } else {
-      document.getElementById('room-status').innerText = `Waiting for puppy partner... ⏳🐕`;
+      if (statusEl) statusEl.innerText = `Waiting for puppy partner... ⏳🐕`;
     }
   });
 
@@ -394,7 +422,9 @@ function listenToRoom() {
 
 function joinRoom(isAuto = false) {
   if (!isAuto) playSound('click');
-  const inputCode = document.getElementById('room-input').value.trim();
+  const roomInput = document.getElementById('room-input');
+  if (!roomInput) return;
+  const inputCode = roomInput.value.trim();
   if (!inputCode) return alert("Please enter a partner code! 🐾");
   
   currentPartnerCode = inputCode;
@@ -404,9 +434,13 @@ function joinRoom(isAuto = false) {
   const chatContainer = document.getElementById('chat-messages-container');
   if (chatContainer) chatContainer.innerHTML = '';
   
-  document.getElementById('room-input-row').classList.add('hidden-section');
-  document.getElementById('room-connected-display').classList.remove('hidden-section');
-  document.getElementById('active-code-label').innerText = `Code: ${currentPartnerCode}`;
+  const inputRow = document.getElementById('room-input-row');
+  const connectedDisplay = document.getElementById('room-connected-display');
+  const codeLabel = document.getElementById('active-code-label');
+  
+  if (inputRow) inputRow.classList.add('hidden-section');
+  if (connectedDisplay) connectedDisplay.classList.remove('hidden-section');
+  if (codeLabel) codeLabel.innerText = `Code: ${currentPartnerCode}`;
 
   setupPresence();
   listenToRoom();
@@ -414,8 +448,10 @@ function joinRoom(isAuto = false) {
 
 function editPartnerCode() {
   playSound('click');
-  document.getElementById('room-input-row').classList.remove('hidden-section');
-  document.getElementById('room-connected-display').classList.add('hidden-section');
+  const inputRow = document.getElementById('room-input-row');
+  const connectedDisplay = document.getElementById('room-connected-display');
+  if (inputRow) inputRow.classList.remove('hidden-section');
+  if (connectedDisplay) connectedDisplay.classList.add('hidden-section');
 }
 
 // ================= CHAT & MEDIA SHARING =================
@@ -425,6 +461,7 @@ function handleChatKeyDown(event) {
 
 function sendChatMessage() {
   const input = document.getElementById('chat-text-input');
+  if (!input) return;
   const text = input.value.trim();
   if (!text) return;
 
@@ -455,6 +492,7 @@ function handleMediaUpload(event) {
 
 function appendChatMessage(msg) {
   const container = document.getElementById('chat-messages-container');
+  if (!container) return;
   const div = document.createElement('div');
   div.className = 'chat-msg' + (msg.sender === myClientId ? ' mine' : '');
 
@@ -473,9 +511,12 @@ function setRole(role) {
   playSound('click');
   myRole = role;
   localStorage.setItem('lounge_ttt_role', role);
-  document.getElementById('ttt-select-box').classList.add('hidden-section');
-  document.getElementById('ttt-locked-box').classList.remove('hidden-section');
-  document.getElementById('role-display').innerText = `You are playing as: ${myRole}`;
+  const tttSelect = document.getElementById('ttt-select-box');
+  const tttLocked = document.getElementById('ttt-locked-box');
+  const roleDisp = document.getElementById('role-display');
+  if (tttSelect) tttSelect.classList.add('hidden-section');
+  if (tttLocked) tttLocked.classList.remove('hidden-section');
+  if (roleDisp) roleDisp.innerText = `You are playing as: ${myRole}`;
 }
 
 function resetRoleSelection(gameType) {
@@ -483,13 +524,17 @@ function resetRoleSelection(gameType) {
   if (gameType === 'ttt') {
     localStorage.removeItem('lounge_ttt_role');
     myRole = null;
-    document.getElementById('ttt-select-box').classList.remove('hidden-section');
-    document.getElementById('ttt-locked-box').classList.add('hidden-section');
+    const tttSelect = document.getElementById('ttt-select-box');
+    const tttLocked = document.getElementById('ttt-locked-box');
+    if (tttSelect) tttSelect.classList.remove('hidden-section');
+    if (tttLocked) tttLocked.classList.add('hidden-section');
   } else if (gameType === 'duel') {
     localStorage.removeItem('lounge_duel_role');
     myDuelRole = null;
-    document.getElementById('duel-select-box').classList.remove('hidden-section');
-    document.getElementById('duel-locked-box').classList.add('hidden-section');
+    const duelSelect = document.getElementById('duel-select-box');
+    const duelLocked = document.getElementById('duel-locked-box');
+    if (duelSelect) duelSelect.classList.remove('hidden-section');
+    if (duelLocked) duelLocked.classList.add('hidden-section');
   }
 }
 
@@ -506,8 +551,9 @@ function makeMove(index) {
 
 function updateUI() {
   const cells = document.getElementsByClassName('cell');
-  for (let i = 0; i < 9; i++) cells[i].innerText = boardState[i];
-  if (gameActive) document.getElementById('status').innerText = `Player ${currentPlayer}'s Turn 🐾`;
+  for (let i = 0; i < 9 && cells[i]; i++) cells[i].innerText = boardState[i];
+  const statusEl = document.getElementById('status');
+  if (gameActive && statusEl) statusEl.innerText = `Player ${currentPlayer}'s Turn 🐾`;
 }
 
 function checkResult() {
@@ -518,15 +564,16 @@ function checkResult() {
       roundWon = true; break;
     }
   }
+  const statusEl = document.getElementById('status');
   if (roundWon) {
     const winner = currentPlayer === 'X' ? 'O' : 'X';
-    document.getElementById('status').innerText = `🎉 Player ${winner} Wins! 🐶💕`;
+    if (statusEl) statusEl.innerText = `🎉 Player ${winner} Wins! 🐶💕`;
     gameActive = false;
     playSound('win');
     return;
   }
   if (!boardState.includes('')) {
-    document.getElementById('status').innerText = "It's a Puppy Draw! 🤝🐾";
+    if (statusEl) statusEl.innerText = "It's a Puppy Draw! 🤝🐾";
     gameActive = false;
     playSound('wrong');
   }
@@ -541,15 +588,20 @@ function setDuelPlayer(role) {
   playSound('click');
   myDuelRole = role;
   localStorage.setItem('lounge_duel_role', role);
-  document.getElementById('duel-select-box').classList.add('hidden-section');
-  document.getElementById('duel-locked-box').classList.remove('hidden-section');
-  document.getElementById('duel-identity').innerText = `You are playing as: ${role}`;
+  const duelSelect = document.getElementById('duel-select-box');
+  const duelLocked = document.getElementById('duel-locked-box');
+  const duelId = document.getElementById('duel-identity');
+  if (duelSelect) duelSelect.classList.add('hidden-section');
+  if (duelLocked) duelLocked.classList.remove('hidden-section');
+  if (duelId) duelId.innerText = `You are playing as: ${role}`;
   updateDuelUI();
 }
 
 function lockSecretNumber() {
   if (!myDuelRole) return alert("Select identity first! ✨");
-  const val = parseInt(document.getElementById('secret-input').value);
+  const secretInput = document.getElementById('secret-input');
+  if (!secretInput) return;
+  const val = parseInt(secretInput.value);
   if (isNaN(val) || val < 1 || val > 100) return alert("Enter valid number 1-100! 🦴");
 
   playSound('click');
@@ -566,7 +618,9 @@ function submitDuelGuess() {
   const turn = duelData.currentTurn || 'Aryan';
   if (turn !== myDuelRole) return alert(`It's ${turn}'s turn! ⏳`);
 
-  const guessVal = parseInt(document.getElementById('guess-input').value);
+  const guessInput = document.getElementById('guess-input');
+  if (!guessInput) return;
+  const guessVal = parseInt(guessInput.value);
   if (isNaN(guessVal) || guessVal < 1 || guessVal > 100) return alert("Enter valid number 1-100! 🦴");
 
   const target = myDuelRole === 'Aryan' ? duelData.teresaSecret : duelData.aryanSecret;
@@ -582,7 +636,7 @@ function submitDuelGuess() {
     feedbackText = `${myDuelRole} guessed ${guessVal} — Too High! 🚀`; hint = "Too High 🚀"; playSound('wrong');
   }
 
-  document.getElementById('guess-input').value = '';
+  guessInput.value = '';
   const aryanHistory = duelData.aryanHistory || [];
   const teresaHistory = duelData.teresaHistory || [];
   if (myDuelRole === 'Aryan') aryanHistory.push(`${guessVal} (${hint})`);
@@ -601,22 +655,32 @@ function updateDuelUI() {
   const aryanReady = duelData.aryanSecret !== undefined && duelData.aryanSecret !== null;
   const teresaReady = duelData.teresaSecret !== undefined && duelData.teresaSecret !== null;
 
+  const setNumberBox = document.getElementById('set-number-box');
+  const guessDuelBox = document.getElementById('guess-duel-box');
+  const turnIndicator = document.getElementById('turn-indicator');
+  const revealBox = document.getElementById('secret-reveal-box');
+  const revealAryan = document.getElementById('reveal-aryan');
+  const revealTeresa = document.getElementById('reveal-teresa');
+  const guessFeedback = document.getElementById('guess-feedback');
+  const aryanHist = document.getElementById('aryan-history');
+  const teresaHist = document.getElementById('teresa-history');
+
   if (aryanReady && teresaReady) {
-    document.getElementById('set-number-box').classList.add('hidden-section');
-    document.getElementById('guess-duel-box').classList.remove('hidden-section');
+    if (setNumberBox) setNumberBox.classList.add('hidden-section');
+    if (guessDuelBox) guessDuelBox.classList.remove('hidden-section');
     if (duelData.winner) {
-      document.getElementById('turn-indicator').innerText = `Game Over! 🎉 ${duelData.winner} Wins!`;
-      document.getElementById('secret-reveal-box').classList.remove('hidden-section');
-      document.getElementById('reveal-aryan').innerText = duelData.aryanSecret;
-      document.getElementById('reveal-teresa').innerText = duelData.teresaSecret;
+      if (turnIndicator) turnIndicator.innerText = `Game Over! 🎉 ${duelData.winner} Wins!`;
+      if (revealBox) revealBox.classList.remove('hidden-section');
+      if (revealAryan) revealAryan.innerText = duelData.aryanSecret;
+      if (revealTeresa) revealTeresa.innerText = duelData.teresaSecret;
     }
   } else {
-    document.getElementById('set-number-box').classList.remove('hidden-section');
-    document.getElementById('guess-duel-box').classList.add('hidden-section');
+    if (setNumberBox) setNumberBox.classList.remove('hidden-section');
+    if (guessDuelBox) guessDuelBox.classList.add('hidden-section');
   }
-  document.getElementById('guess-feedback').innerText = duelData.feedback || '';
-  document.getElementById('aryan-history').innerHTML = (duelData.aryanHistory || []).map(i => `<li>${i}</li>`).join('');
-  document.getElementById('teresa-history').innerHTML = (duelData.teresaHistory || []).map(i => `<li>${i}</li>`).join('');
+  if (guessFeedback) guessFeedback.innerText = duelData.feedback || '';
+  if (aryanHist) aryanHist.innerHTML = (duelData.aryanHistory || []).map(i => `<li>${i}</li>`).join('');
+  if (teresaHist) teresaHist.innerHTML = (duelData.teresaHistory || []).map(i => `<li>${i}</li>`).join('');
 }
 
 function resetDuelGame() {
@@ -642,7 +706,8 @@ async function startCall() {
     };
 
     localStream = await navigator.mediaDevices.getUserMedia(constraints);
-    document.getElementById('local-video').srcObject = localStream;
+    const localVideo = document.getElementById('local-video');
+    if (localVideo) localVideo.srcObject = localStream;
 
     createPeerConnection();
 
@@ -656,7 +721,7 @@ async function startCall() {
         isInitiator = false;
         roomRef.child('signals/offer').once('value', async (offSnap) => {
           const offer = offSnap.val();
-          if (offer && !peerConnection.remoteDescription) {
+          if (offer && peerConnection && !peerConnection.remoteDescription) {
             await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
@@ -668,7 +733,7 @@ async function startCall() {
 
     roomRef.child('signals/answer').on('value', async (snap) => {
       const answer = snap.val();
-      if (answer && isInitiator && !peerConnection.currentRemoteDescription) {
+      if (answer && isInitiator && peerConnection && !peerConnection.currentRemoteDescription) {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
       }
     });
@@ -680,7 +745,6 @@ async function startCall() {
       }
     });
 
-    // Transform control panel to show Mute, Cam toggle, Fullscreen, and Disconnect buttons
     renderActiveCallControls();
 
   } catch (err) {
@@ -693,7 +757,8 @@ function createPeerConnection() {
   localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
   remoteStream = new MediaStream();
-  document.getElementById('remote-video').srcObject = remoteStream;
+  const remoteVideo = document.getElementById('remote-video');
+  if (remoteVideo) remoteVideo.srcObject = remoteStream;
 
   peerConnection.ontrack = (event) => {
     event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
@@ -706,6 +771,7 @@ function createPeerConnection() {
 
 function renderActiveCallControls() {
   const wrapper = document.getElementById('controls-wrapper');
+  if (!wrapper) return;
   wrapper.innerHTML = `
     <div class="call-controls">
       <button class="audio-btn" onclick="toggleAudio()">🎤 Mute</button>
@@ -719,19 +785,24 @@ function renderActiveCallControls() {
 function toggleAudio() {
   if (!localStream) return;
   const track = localStream.getAudioTracks()[0];
+  if (!track) return;
   track.enabled = !track.enabled;
-  document.querySelector('.audio-btn').innerText = track.enabled ? "🎤 Mute" : "🔇 Unmuted";
+  const audioBtn = document.querySelector('.audio-btn');
+  if (audioBtn) audioBtn.innerText = track.enabled ? "🎤 Mute" : "🔇 Unmuted";
 }
 
 function toggleVideo() {
   if (!localStream) return;
   const track = localStream.getVideoTracks()[0];
+  if (!track) return;
   track.enabled = !track.enabled;
-  document.querySelector('.video-btn').innerText = track.enabled ? "📹 Cam Off" : "📷 Cam On";
+  const videoBtn = document.querySelector('.video-btn');
+  if (videoBtn) videoBtn.innerText = track.enabled ? "📹 Cam Off" : "📷 Cam On";
 }
 
 function toggleRemoteFullscreen() {
   const container = document.getElementById('remote-video-card');
+  if (!container) return;
   if (!document.fullscreenElement && !document.webkitFullscreenElement) {
     if (container.requestFullscreen) container.requestFullscreen();
     else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
@@ -741,23 +812,19 @@ function toggleRemoteFullscreen() {
   }
 }
 
-// Completely disconnects video & voice channels and cuts hardware streams
 function disconnectCall() {
   playSound('click');
 
-  // 1. Stop all local microphone and video tracks (turns off hardware camera/mic indicators)
   if (localStream) {
     localStream.getTracks().forEach(track => track.stop());
     localStream = null;
   }
 
-  // 2. Stop remote incoming tracks
   if (remoteStream) {
     remoteStream.getTracks().forEach(track => track.stop());
     remoteStream = null;
   }
 
-  // 3. Close WebRTC Peer connection
   if (peerConnection) {
     peerConnection.onicecandidate = null;
     peerConnection.ontrack = null;
@@ -765,13 +832,11 @@ function disconnectCall() {
     peerConnection = null;
   }
 
-  // 4. Clear video elements sources
   const localVideo = document.getElementById('local-video');
   const remoteVideo = document.getElementById('remote-video');
   if (localVideo) localVideo.srcObject = null;
   if (remoteVideo) remoteVideo.srcObject = null;
 
-  // 5. Clean up signaling node data
   if (roomRef) {
     roomRef.child('signals/caller').remove();
     roomRef.child('signals/offer').remove();
@@ -779,12 +844,14 @@ function disconnectCall() {
     roomRef.child('signals/candidates').remove();
   }
 
-  // 6. Reset control panel back to initial connect state
-  document.getElementById('controls-wrapper').innerHTML = `
-    <div class="call-controls">
-      <button class="call-btn" onclick="startCall()">Connect Call</button>
-    </div>
-  `;
+  const wrapper = document.getElementById('controls-wrapper');
+  if (wrapper) {
+    wrapper.innerHTML = `
+      <div class="call-controls">
+        <button class="call-btn" onclick="startCall()">Connect Call</button>
+      </div>
+    `;
+  }
 
   console.log("Video and voice calls completely disconnected. Hardware streams released.");
 }

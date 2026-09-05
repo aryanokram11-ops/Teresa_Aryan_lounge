@@ -326,7 +326,6 @@ main {
   display: block;
 }
 
-/* Fullscreen support for both host and non-host devices */
 .video-card:fullscreen {
   width: 100vw;
   height: 100vh;
