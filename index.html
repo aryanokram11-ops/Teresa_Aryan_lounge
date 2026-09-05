@@ -3,82 +3,106 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Our Little Lounge ❤️</title>
+  <title>Our Super Cute Little Lounge 💖✨</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
+  <div class="floating-hearts-bg" id="hearts-bg"></div>
+
   <header>
     <div class="header-content">
       <img src="https://media.giphy.com/media/MDJ9IbxxvDUQM/giphy.gif" alt="Cute Bear Heart" class="header-gif">
       <div>
-        <h1>Our Little Lounge ❤️</h1>
-        <p class="subtitle">A cozy space just for us</p>
+        <h1>Our Little Lounge 💖✨</h1>
+        <p class="subtitle">✨ A super cozy magical space just for us ✨</p>
       </div>
       <img src="https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif" alt="Cute Cats Hugging" class="header-gif">
     </div>
     <nav>
       <button type="button" onclick="showSection('movies')">🍿 Watch Party</button>
-      <button type="button" onclick="showSection('games-hub')">🎮 Mini-Games</button>
+      <button type="button" onclick="showSection('games-hub')">🎮 Mini-Games Hub</button>
     </nav>
   </header>
 
   <main>
-    <!-- Watch Party Section -->
     <section id="movies" class="active-section">
-      <h2>Movie Time</h2>
+      <div class="section-title-badge">
+        <span>🍿 Cozy Movie & Video Date 🍿</span>
+      </div>
       <div class="video-container">
         <iframe src="https://www.youtube.com/embed/jfKfPfyJRdk" allowfullscreen></iframe>
       </div>
     </section>
 
-    <!-- Mini Games Main Hub -->
     <section id="games-hub" class="hidden-section">
-      <!-- Shared Partner Code Setup -->
-      <div class="multiplayer-box">
-        <div class="room-row">
-          <label for="room-input"><b>Partner Code:</b></label>
-          <input type="text" id="room-input" value="love-lounge" placeholder="Enter partner code">
-          <button type="button" onclick="joinRoom()">Connect</button>
+      <div id="embedded-video-chat-slot" class="embedded-chat-slot hidden-section">
+        <div class="embedded-chat-header">
+          <span>📹 Live Voice & Video Love Lounge 💕</span>
         </div>
-        <p id="room-status" style="font-weight: bold; color: #ff6b81; margin-top: 8px;">Connecting to lounge...</p>
+        <div class="video-streams">
+          <div class="video-wrapper">
+            <video id="embedded-remote-video" autoplay playsinline></video>
+            <span class="video-label">Partner ❤️</span>
+          </div>
+          <div class="video-wrapper">
+            <video id="embedded-local-video" autoplay playsinline muted></video>
+            <span class="video-label">You ✨</span>
+          </div>
+        </div>
+        <div class="chat-controls">
+          <button type="button" onclick="toggleAudio()" class="audio-btn">🎤 Mute</button>
+          <button type="button" onclick="toggleVideo()" class="video-btn">📹 Cam Off</button>
+          <button type="button" onclick="startCall()" class="call-btn" style="background: #2ed573;">Connect</button>
+        </div>
       </div>
 
-      <!-- Games Selection List -->
+      <div class="multiplayer-box">
+        <div id="room-input-row" class="room-row">
+          <label for="room-input"><b>💌 Partner Code:</b></label>
+          <input type="text" id="room-input" value="love-lounge" placeholder="Enter secret code">
+          <button type="button" onclick="joinRoom()">Connect 💖</button>
+        </div>
+        <div id="room-connected-display" class="hidden-section" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <span id="active-code-label" style="font-weight: bold; color: var(--primary);">Code: love-lounge</span>
+          <button type="button" onclick="editPartnerCode()" style="padding: 4px 10px; font-size: 0.85rem; background: #a4b0be;">Change Code</button>
+        </div>
+        <p id="room-status" style="font-weight: bold; color: #ff6b81; margin-top: 8px; margin-bottom: 0;">Connecting to our cozy room...</p>
+      </div>
+
       <div id="game-selection-menu">
         <div class="menu-banner">
           <img src="https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif" alt="Cute dancing cat" class="banner-gif">
-          <h2>Choose a Game</h2>
+          <h2>Choose a Fun Game! ✨</h2>
           <img src="https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif" alt="Cute dancing cat" class="banner-gif">
         </div>
         <div class="game-list">
           <div class="game-card" onclick="selectGame('tictactoe')">
-            <h3>❌⭕ Tic-Tac-Toe</h3>
-            <p>Classic 2-player real-time grid game.</p>
-            <button type="button">Play Game</button>
+            <div class="card-icon">❌⭕</div>
+            <h3>Tic-Tac-Toe</h3>
+            <p>Classic cute real-time grid game!</p>
+            <button type="button">Play Now! 💖</button>
           </div>
           <div class="game-card" onclick="selectGame('guessing')">
-            <h3>🔢 Secret Number Duel</h3>
-            <p>Set a secret number for each other and race to guess it first!</p>
-            <button type="button">Play Game</button>
+            <div class="card-icon">🔢</div>
+            <h3>Secret Number Duel</h3>
+            <p>Set a secret number and race to guess it first!</p>
+            <button type="button">Play Now! 💖</button>
           </div>
         </div>
       </div>
 
-      <!-- Tic-Tac-Toe Game Screen -->
       <div id="tictactoe-game" class="game-screen hidden-section">
         <button type="button" class="back-btn" onclick="backToGameList()">← Back to Games Menu</button>
-        <h2>Real-Time Tic-Tac-Toe</h2>
+        <h2>❌⭕ Real-Time Tic-Tac-Toe</h2>
         
-        <!-- Role Selection / Locked Display -->
         <div id="ttt-role-container" class="role-row">
           <div id="ttt-select-box">
-            <span>Pick your symbol: </span>
+            <span>Pick your magical symbol: </span>
             <div class="role-btn-group">
-              <button type="button" onclick="setRole('X')">Play as X</button>
-              <button type="button" onclick="setRole('O')">Play as O</button>
+              <button type="button" onclick="setRole('X')">Play as X ✨</button>
+              <button type="button" onclick="setRole('O')">Play as O 💖</button>
             </div>
           </div>
           <div id="ttt-locked-box" class="hidden-section" style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">
@@ -99,21 +123,19 @@
           <div class="cell" onclick="makeMove(7)"></div>
           <div class="cell" onclick="makeMove(8)"></div>
         </div>
-        <button type="button" class="reset-btn" onclick="resetGame()">Restart Game</button>
+        <button type="button" class="reset-btn" onclick="resetGame()">Restart Game ✨</button>
       </div>
 
-      <!-- Secret Number Duel Screen -->
       <div id="guessing-game" class="game-screen hidden-section">
         <button type="button" class="back-btn" onclick="backToGameList()">← Back to Games Menu</button>
-        <h2>Secret Number Duel</h2>
+        <h2>🔢 Secret Number Duel</h2>
 
-        <!-- Identity Selection / Locked Display -->
         <div id="duel-role-container" class="role-row">
           <div id="duel-select-box">
-            <span>Who are you? </span>
+            <span>Who are you today, cutie? </span>
             <div class="role-btn-group">
-              <button type="button" id="aryan-btn" onclick="setDuelPlayer('Aryan')">Aryan</button>
-              <button type="button" id="teresa-btn" onclick="setDuelPlayer('Teresa')">Teresa</button>
+              <button type="button" id="aryan-btn" onclick="setDuelPlayer('Aryan')">Aryan 💙</button>
+              <button type="button" id="teresa-btn" onclick="setDuelPlayer('Teresa')">Teresa 💖</button>
             </div>
           </div>
           <div id="duel-locked-box" class="hidden-section" style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">
@@ -122,41 +144,37 @@
           </div>
         </div>
 
-        <!-- Phase 1: Set Numbers -->
         <div id="set-number-box" class="duel-box">
           <div style="text-align: center; margin-bottom: 10px;">
             <img src="https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif" alt="Cute love gif" style="width: 70px; border-radius: 50%;">
           </div>
-          <h3>Step 1: Set Your Secret Number (1-100)</h3>
+          <h3>Step 1: Set Your Secret Number (1-100) ✨</h3>
           <div class="input-row">
             <input type="password" id="secret-input" placeholder="Your Secret Number">
-            <button type="button" onclick="lockSecretNumber()">Lock</button>
+            <button type="button" onclick="lockSecretNumber()">Lock 🔒</button>
           </div>
           <p id="secret-status">Status: Waiting for both players to lock numbers...</p>
         </div>
 
-        <!-- Phase 2: Guessing Duel -->
         <div id="guess-duel-box" class="duel-box hidden-section">
-          <h3>Step 2: Guessing Phase</h3>
+          <h3>Step 2: Guessing Phase 🎯</h3>
           <p id="turn-indicator">Make your guess!</p>
 
           <div class="guess-controls">
-            <input type="number" id="guess-input" placeholder="Enter guess (1-100)" min="1" max="100">
-            <button type="button" onclick="submitDuelGuess()">Submit</button>
+            <input type="number" id="guess-input" placeholder="Guess (1-100)" min="1" max="100">
+            <button type="button" onclick="submitDuelGuess()">Submit ✨</button>
           </div>
 
           <p id="guess-feedback">No guesses made yet.</p>
 
-          <!-- Secret Numbers Revealed Box (Shown on Game End) -->
           <div id="secret-reveal-box" class="hidden-section" style="background: linear-gradient(135deg, #ffeaa7, #fab1a0); padding: 12px; border-radius: 12px; margin: 15px 0; border: 2px solid #e17055; text-align: center;">
             <img src="https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif" alt="Celebrate gif" style="width: 50px; border-radius: 50%; margin-bottom: 5px;">
-            <h4 style="margin: 0 0 6px 0; color: #d63031;">🔓 Secret Numbers Revealed!</h4>
+            <h4 style="margin: 0 0 6px 0; color: #d63031;">🔓 Secret Numbers Revealed! 🎉</h4>
             <p style="margin: 0; font-weight: bold; font-size: 1rem; color: #2d3436;">
               Aryan's: <span id="reveal-aryan" style="color: #d63031;">--</span> | Teresa's: <span id="reveal-teresa" style="color: #d63031;">--</span>
             </p>
           </div>
 
-          <!-- Player History Boxes -->
           <div class="history-container">
             <div id="aryan-history-box" class="history-box">
               <h4 style="margin: 0 0 6px 0; color: #ff6b81;">Aryan's Guesses</h4>
@@ -169,32 +187,31 @@
           </div>
         </div>
 
-        <button type="button" class="reset-btn" onclick="resetDuelGame()">Reset Secret Duel</button>
+        <button type="button" class="reset-btn" onclick="resetDuelGame()">Reset Secret Duel 💖</button>
       </div>
     </section>
   </main>
 
-  <!-- Clean, Modern Floating Video & Voice Chat Widget -->
-  <div id="video-chat-container" class="video-chat-box">
+  <div id="floating-video-chat-container" class="video-chat-box">
     <div class="video-chat-header" onclick="toggleWidgetCollapse()">
-      <span>📹 Video Lounge ❤️</span>
+      <span>📹 Video Lounge 💖</span>
       <span id="collapse-icon">▲</span>
     </div>
     <div id="video-chat-body" class="video-chat-body">
       <div class="video-streams">
         <div class="video-wrapper">
-          <video id="remote-video" autoplay playsinline></video>
+          <video id="floating-remote-video" autoplay playsinline></video>
           <span class="video-label">Partner ❤️</span>
         </div>
         <div class="video-wrapper">
-          <video id="local-video" autoplay playsinline muted></video>
-          <span class="video-label">You</span>
+          <video id="floating-local-video" autoplay playsinline muted></video>
+          <span class="video-label">You ✨</span>
         </div>
       </div>
       <div class="chat-controls">
-        <button type="button" onclick="toggleAudio()" id="audio-btn">🎤 Mute</button>
-        <button type="button" onclick="toggleVideo()" id="video-btn">📹 Cam Off</button>
-        <button type="button" onclick="startCall()" id="call-btn" style="background: #2ed573;">Connect</button>
+        <button type="button" onclick="toggleAudio()" class="audio-btn">🎤 Mute</button>
+        <button type="button" onclick="toggleVideo()" class="video-btn">📹 Cam Off</button>
+        <button type="button" onclick="startCall()" class="call-btn" style="background: #2ed573;">Connect</button>
       </div>
     </div>
   </div>

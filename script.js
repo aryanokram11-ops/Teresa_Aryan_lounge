@@ -1,3 +1,40 @@
+// Dynamic Floating Background Hearts Generator
+window.addEventListener('DOMContentLoaded', () => {
+  const heartsBg = document.getElementById('hearts-bg');
+  const heartSymbols = ['💖', '✨', '💕', '💗', '⭐', '❤️', '🌸'];
+  
+  for (let i = 0; i < 18; i++) {
+    const heart = document.createElement('div');
+    heart.className = 'heart-particle';
+    heart.innerText = heartSymbols[Math.floor(Math.random() * heartSymbols.length)];
+    heart.style.left = Math.random() * 100 + 'vw';
+    heart.style.animationDuration = (6 + Math.random() * 6) + 's';
+    heart.style.animationDelay = (Math.random() * 5) + 's';
+    heart.style.fontSize = (16 + Math.random() * 18) + 'px';
+    heartsBg.appendChild(heart);
+  }
+
+  if (myRole) {
+    document.getElementById('ttt-select-box').classList.add('hidden-section');
+    document.getElementById('ttt-locked-box').classList.remove('hidden-section');
+    document.getElementById('role-display').innerText = `You are playing as: ${myRole}`;
+  }
+
+  if (myDuelRole) {
+    document.getElementById('duel-select-box').classList.add('hidden-section');
+    document.getElementById('duel-locked-box').classList.remove('hidden-section');
+    document.getElementById('duel-identity').innerText = `You are playing as: ${myDuelRole}`;
+  }
+
+  const savedCode = localStorage.getItem('lounge_partner_code');
+  if (savedCode) {
+    currentPartnerCode = savedCode;
+    document.getElementById('room-input').value = savedCode;
+  }
+
+  joinRoom(true);
+});
+
 // Web Audio API Synthesized Meme Sound Generator
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx;
@@ -16,14 +53,14 @@ function playSound(type) {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(400, now);
-    osc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+    osc.frequency.setValueAtTime(450, now);
+    osc.frequency.exponentialRampToValueAtTime(850, now + 0.06);
     gain.gain.setValueAtTime(0.3, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
     osc.start(now);
-    osc.stop(now + 0.05);
+    osc.stop(now + 0.06);
   } else if (type === 'win') {
     const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
     notes.forEach((freq, idx) => {
@@ -31,7 +68,7 @@ function playSound(type) {
       const gain = audioCtx.createGain();
       osc.type = 'triangle';
       osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.2, now + idx * 0.1);
+      gain.gain.setValueAtTime(0.25, now + idx * 0.1);
       gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.1 + 0.25);
       osc.connect(gain);
       gain.connect(audioCtx.destination);
@@ -59,8 +96,23 @@ function showSection(sectionId) {
     sec.classList.add('hidden-section');
     sec.classList.remove('active-section');
   });
-  document.getElementById(sectionId).classList.add('active-section');
-  document.getElementById(sectionId).classList.remove('hidden-section');
+  
+  const targetSection = document.getElementById(sectionId);
+  targetSection.classList.add('active-section');
+  targetSection.classList.remove('hidden-section');
+
+  const floatingWidget = document.getElementById('floating-video-chat-container');
+  const embeddedSlot = document.getElementById('embedded-video-chat-slot');
+
+  if (sectionId === 'games-hub') {
+    floatingWidget.classList.add('hidden-section');
+    embeddedSlot.classList.remove('hidden-section');
+    syncVideoElements('embedded');
+  } else {
+    floatingWidget.classList.remove('hidden-section');
+    embeddedSlot.classList.add('hidden-section');
+    syncVideoElements('floating');
+  }
 }
 
 function selectGame(gameId) {
@@ -81,7 +133,6 @@ function backToGameList() {
   document.getElementById('game-selection-menu').classList.remove('hidden-section');
 }
 
-// Widget minimize/collapse feature
 function toggleWidgetCollapse() {
   const body = document.getElementById('video-chat-body');
   const icon = document.getElementById('collapse-icon');
@@ -139,22 +190,6 @@ let duelData = {
   roles: {}
 };
 
-window.addEventListener('DOMContentLoaded', () => {
-  if (myRole) {
-    document.getElementById('ttt-select-box').classList.add('hidden-section');
-    document.getElementById('ttt-locked-box').classList.remove('hidden-section');
-    document.getElementById('role-display').innerText = `You are playing as: ${myRole}`;
-  }
-
-  if (myDuelRole) {
-    document.getElementById('duel-select-box').classList.add('hidden-section');
-    document.getElementById('duel-locked-box').classList.remove('hidden-section');
-    document.getElementById('duel-identity').innerText = `You are playing as: ${myDuelRole}`;
-  }
-
-  joinRoom();
-});
-
 function setRole(role) {
   playSound('click');
   myRole = role;
@@ -174,7 +209,7 @@ function setDuelPlayer(role) {
     const currentHolder = roles[role];
 
     if (currentHolder && currentHolder !== myClientId) {
-      alert(`${role} is already taken by your partner!`);
+      alert(`${role} is already taken by your partner! 🥺`);
       return;
     }
 
@@ -238,10 +273,10 @@ function listenToRoom() {
       const statusEl = document.getElementById('room-status');
 
       if (activeCount >= 2) {
-        statusEl.innerText = `Connected to partner code: ${currentPartnerCode} — Partner Connected ❤️`;
+        statusEl.innerText = `Partner Connected! ❤️✨`;
         statusEl.style.color = "#2ed573";
       } else {
-        statusEl.innerText = `Connected to partner code: ${currentPartnerCode} — Waiting for partner to join... ⏳`;
+        statusEl.innerText = `Waiting for partner to join... ⏳💖`;
         statusEl.style.color = "#ff6b81";
       }
 
@@ -258,27 +293,39 @@ function listenToRoom() {
         updateDuelUI();
       }
     } else {
-      document.getElementById('room-status').innerText = `Connected to partner code: ${currentPartnerCode} — Waiting for partner to join... ⏳`;
+      document.getElementById('room-status').innerText = `Waiting for partner to join... ⏳💖`;
       document.getElementById('room-status').style.color = "#ff6b81";
     }
   });
 }
 
-function joinRoom() {
-  playSound('click');
+function joinRoom(isAuto = false) {
+  if (!isAuto) playSound('click');
   const inputCode = document.getElementById('room-input').value.trim();
-  if (!inputCode) return alert("Please enter a partner code!");
+  if (!inputCode) return alert("Please enter a partner code! 💖");
   
   currentPartnerCode = inputCode;
+  localStorage.setItem('lounge_partner_code', currentPartnerCode);
   roomRef = db.ref('rooms/' + currentPartnerCode);
   
+  document.getElementById('room-input-row').classList.add('hidden-section');
+  document.getElementById('room-connected-display').classList.remove('hidden-section');
+  document.getElementById('active-code-label').innerText = `Code: ${currentPartnerCode}`;
+
   setupPresence();
   listenToRoom();
 }
 
+function editPartnerCode() {
+  playSound('click');
+  document.getElementById('room-input-row').classList.remove('hidden-section');
+  document.getElementById('room-connected-display').classList.add('hidden-section');
+  document.getElementById('room-status').innerText = "Enter code and click Connect 💖";
+}
+
 // Tic-Tac-Toe Functions
 function makeMove(index) {
-  if (!myRole) return alert("Please select whether you are Player X or O first!");
+  if (!myRole) return alert("Please select whether you are Player X or O first! ✨");
   if (boardState[index] !== '' || !gameActive) return;
   if (currentPlayer !== myRole) return alert(`It's Player ${currentPlayer}'s turn! You are Player ${myRole}.`);
 
@@ -299,7 +346,7 @@ function updateUI() {
     cells[i].innerText = boardState[i];
   }
   if (gameActive) {
-    document.getElementById('status').innerText = `Player ${currentPlayer}'s Turn`;
+    document.getElementById('status').innerText = `Player ${currentPlayer}'s Turn ✨`;
   }
 }
 
@@ -315,14 +362,14 @@ function checkResult() {
 
   if (roundWon) {
     const winner = currentPlayer === 'X' ? 'O' : 'X';
-    document.getElementById('status').innerText = `Player ${winner} Wins! 💕`;
+    document.getElementById('status').innerText = `🎉 Player ${winner} Wins! 💕 Yaaay!`;
     gameActive = false;
     playSound('win');
     return;
   }
 
   if (!boardState.includes('')) {
-    document.getElementById('status').innerText = "It's a Draw!";
+    document.getElementById('status').innerText = "It's a Cozy Draw! 🤝💖";
     gameActive = false;
     playSound('wrong');
   }
@@ -355,9 +402,9 @@ const closeRoasts = [
 ];
 
 function lockSecretNumber() {
-  if (!myDuelRole) return alert("Please select whether you are Aryan or Teresa first!");
+  if (!myDuelRole) return alert("Please select whether you are Aryan or Teresa first! ✨");
   const val = parseInt(document.getElementById('secret-input').value);
-  if (isNaN(val) || val < 1 || val > 100) return alert("Enter a valid number between 1 and 100!");
+  if (isNaN(val) || val < 1 || val > 100) return alert("Enter a valid number between 1 and 100! 💖");
 
   playSound('click');
   const updateObj = {};
@@ -367,18 +414,18 @@ function lockSecretNumber() {
   if (!duelData.currentTurn) updateObj.currentTurn = 'Aryan';
 
   roomRef.child('secretDuel').update(updateObj);
-  document.getElementById('secret-status').innerText = "Status: Secret number locked! Waiting for partner...";
+  document.getElementById('secret-status').innerText = "Status: Secret number locked! Waiting for partner... 🔒";
 }
 
 function submitDuelGuess() {
-  if (!myDuelRole) return alert("Please select your identity first!");
+  if (!myDuelRole) return alert("Please select your identity first! ✨");
   const turn = duelData.currentTurn || 'Aryan';
 
-  if (duelData.winner) return alert("The game is over! Reset to play again.");
-  if (turn !== myDuelRole) return alert(`It's ${turn}'s turn to guess!`);
+  if (duelData.winner) return alert("The game is over! Reset to play again. 💖");
+  if (turn !== myDuelRole) return alert(`It's ${turn}'s turn to guess! ⏳`);
 
   const guessVal = parseInt(document.getElementById('guess-input').value);
-  if (isNaN(guessVal) || guessVal < 1 || guessVal > 100) return alert("Enter a valid number between 1 and 100!");
+  if (isNaN(guessVal) || guessVal < 1 || guessVal > 100) return alert("Enter a valid number between 1 and 100! 💖");
 
   const target = myDuelRole === 'Aryan' ? duelData.teresaSecret : duelData.aryanSecret;
   const nextTurn = myDuelRole === 'Aryan' ? 'Teresa' : 'Aryan';
@@ -430,21 +477,21 @@ function updateDuelUI() {
   if (aryanBtn && teresaBtn && !myDuelRole) {
     if (roles.Aryan && roles.Aryan !== myClientId) {
       aryanBtn.disabled = true;
-      aryanBtn.innerText = "Aryan (Taken)";
+      aryanBtn.innerText = "Aryan (Taken 🔒)";
       aryanBtn.style.opacity = "0.6";
     } else {
       aryanBtn.disabled = false;
-      aryanBtn.innerText = "Aryan";
+      aryanBtn.innerText = "Aryan 💙";
       aryanBtn.style.opacity = "1";
     }
 
     if (roles.Teresa && roles.Teresa !== myClientId) {
       teresaBtn.disabled = true;
-      teresaBtn.innerText = "Teresa (Taken)";
+      teresaBtn.innerText = "Teresa (Taken 🔒)";
       teresaBtn.style.opacity = "0.6";
     } else {
       teresaBtn.disabled = false;
-      teresaBtn.innerText = "Teresa";
+      teresaBtn.innerText = "Teresa 💖";
       teresaBtn.style.opacity = "1";
     }
   }
@@ -465,9 +512,9 @@ function updateDuelUI() {
     } else {
       document.getElementById('secret-reveal-box').classList.add('hidden-section');
       if (turn === myDuelRole) {
-        document.getElementById('turn-indicator').innerText = `Make your guess!`;
+        document.getElementById('turn-indicator').innerText = `Make your guess! ✨`;
       } else {
-        document.getElementById('turn-indicator').innerText = `Waiting for ${turn} to guess...`;
+        document.getElementById('turn-indicator').innerText = `Waiting for ${turn} to guess... ⏳`;
       }
     }
   } else {
@@ -477,7 +524,7 @@ function updateDuelUI() {
 
     const myLocked = (myDuelRole === 'Aryan' && aryanReady) || (myDuelRole === 'Teresa' && teresaReady);
     if (myLocked) {
-      document.getElementById('secret-status').innerText = "Status: Secret number locked! Waiting for partner...";
+      document.getElementById('secret-status').innerText = "Status: Secret number locked! Waiting for partner... 🔒";
     } else {
       document.getElementById('secret-status').innerText = `Aryan Ready: ${aryanReady ? '✅' : '❌'} | Teresa Ready: ${teresaReady ? '✅' : '❌'}`;
     }
@@ -498,7 +545,7 @@ function resetDuelGame() {
     aryanSecret: null,
     teresaSecret: null,
     currentTurn: 'Aryan',
-    feedback: 'Game Reset! Lock in your secret numbers.',
+    feedback: 'Game Reset! Lock in your secret numbers. ✨',
     winner: null,
     aryanHistory: [],
     teresaHistory: []
@@ -506,7 +553,7 @@ function resetDuelGame() {
   document.getElementById('secret-input').value = '';
 }
 
-// Fixed & Fully Robust WebRTC Signaling Logic
+// WebRTC Signaling & Active Video Stream Management
 let localStream;
 let remoteStream;
 let peerConnection;
@@ -519,17 +566,26 @@ const rtcConfig = {
   ]
 };
 
+function syncVideoElements(mode) {
+  const localVideoEl = document.getElementById(`${mode}-local-video`);
+  const remoteVideoEl = document.getElementById(`${mode}-remote-video`);
+
+  if (localStream && localVideoEl) localVideoEl.srcObject = localStream;
+  if (remoteStream && remoteVideoEl) remoteVideoEl.srcObject = remoteStream;
+}
+
 async function startCall() {
   playSound('click');
-  document.getElementById('call-btn').innerText = "Connecting...";
+  document.querySelectorAll('.call-btn').forEach(btn => btn.innerText = "Connecting... 💖");
 
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    document.getElementById('local-video').srcObject = localStream;
+    
+    const activeSection = document.querySelector('main > section.active-section').id;
+    syncVideoElements(activeSection === 'games-hub' ? 'embedded' : 'floating');
 
     createPeerConnection();
 
-    // Determine role by trying to claim the offer slot atomically or checking who's there
     roomRef.child('signals/caller').transaction((currentCaller) => {
       if (!currentCaller) {
         return myClientId;
@@ -539,14 +595,12 @@ async function startCall() {
       if (error) {
         console.error("Signaling error:", error);
       } else if (snapshot.val() === myClientId) {
-        // We are the Caller
         isInitiator = true;
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
         roomRef.child('signals/offer').set({ type: offer.type, sdp: offer.sdp });
-        document.getElementById('call-btn').innerText = "Waiting...";
+        document.querySelectorAll('.call-btn').forEach(btn => btn.innerText = "Waiting... ⏳");
       } else {
-        // We are the Callee, listen for existing offer
         isInitiator = false;
         roomRef.child('signals/offer').once('value', async (offSnap) => {
           const offer = offSnap.val();
@@ -555,25 +609,22 @@ async function startCall() {
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
             roomRef.child('signals/answer').set({ type: answer.type, sdp: answer.sdp });
-            document.getElementById('call-btn').innerText = "Connected! 💖";
+            document.querySelectorAll('.call-btn').forEach(btn => btn.innerText = "Connected! 💖");
           }
         });
       }
     });
 
-    // Listen for answer if caller
     roomRef.child('signals/answer').on('value', async (snapshot) => {
       const answer = snapshot.val();
       if (answer && isInitiator && !peerConnection.currentRemoteDescription) {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-        document.getElementById('call-btn').innerText = "Connected! 💖";
+        document.querySelectorAll('.call-btn').forEach(btn => btn.innerText = "Connected! 💖");
       }
     });
 
-    // Listen for ICE candidates from partner
     roomRef.child('signals/candidates').on('child_added', (snapshot) => {
       const candidateData = JSON.parse(snapshot.val());
-      // Prevent adding own candidates
       if (snapshot.key !== myClientId && peerConnection) {
         peerConnection.addIceCandidate(new RTCIceCandidate(candidateData)).catch(e => console.error(e));
       }
@@ -581,8 +632,8 @@ async function startCall() {
 
   } catch (err) {
     console.error("Media access error:", err);
-    alert("Could not access camera or microphone. Please check permissions!");
-    document.getElementById('call-btn').innerText = "Connect";
+    alert("Could not access camera or microphone. Please check permissions! 🥺");
+    document.querySelectorAll('.call-btn').forEach(btn => btn.innerText = "Connect");
   }
 }
 
@@ -594,7 +645,9 @@ function createPeerConnection() {
   });
 
   remoteStream = new MediaStream();
-  document.getElementById('remote-video').srcObject = remoteStream;
+  const activeSection = document.querySelector('main > section.active-section').id;
+  const remoteVideoEl = document.getElementById(`${activeSection === 'games-hub' ? 'embedded' : 'floating'}-remote-video`);
+  if (remoteVideoEl) remoteVideoEl.srcObject = remoteStream;
 
   peerConnection.ontrack = (event) => {
     event.streams[0].getTracks().forEach(track => {
@@ -614,7 +667,8 @@ function toggleAudio() {
   const audioTrack = localStream.getAudioTracks()[0];
   if (audioTrack) {
     audioTrack.enabled = !audioTrack.enabled;
-    document.getElementById('audio-btn').innerText = audioTrack.enabled ? "🎤 Mute" : "🔇 Unmuted";
+    const label = audioTrack.enabled ? "🎤 Mute" : "🔇 Unmuted";
+    document.querySelectorAll('.audio-btn').forEach(btn => btn.innerText = label);
   }
 }
 
@@ -623,6 +677,7 @@ function toggleVideo() {
   const videoTrack = localStream.getVideoTracks()[0];
   if (videoTrack) {
     videoTrack.enabled = !videoTrack.enabled;
-    document.getElementById('video-btn').innerText = videoTrack.enabled ? "📹 Cam Off" : "📷 Cam On";
+    const label = videoTrack.enabled ? "📹 Cam Off" : "📷 Cam On";
+    document.querySelectorAll('.video-btn').forEach(btn => btn.innerText = label);
   }
 }
