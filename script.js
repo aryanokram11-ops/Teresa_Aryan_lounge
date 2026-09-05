@@ -17,7 +17,7 @@ function showSection(sectionId) {
 
 // Database Config
 const firebaseConfig = {
-  databaseURL: "https://our-lounge-default-rtdb.firebaseio.com"
+  databaseURL: "https://assistant-98715-default-rtdb.firebaseio.com"
 };
 
 if (typeof firebase !== 'undefined' && !firebase.apps.length) {
