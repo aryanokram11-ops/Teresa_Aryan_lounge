@@ -7,43 +7,11 @@ function showSection(sectionId) {
   document.getElementById(sectionId).classList.add('active-section');
 }
 
-// PeerJS Logic
+// PeerJS Setup
 let peer = new Peer();
 let conn = null;
 let myRole = ''; // 'X' or 'O'
 
-peer.on('open', (id) => {
-  document.getElementById('my-id').innerText = id;
-});
-
-peer.on('connection', (connection) => {
-  conn = connection;
-  myRole = 'O'; // Receiver becomes Player O
-  setupConnection();
-  document.getElementById('status').innerText = "Connected! Player X goes first.";
-});
-
-function connectToPartner() {
-  const partnerId = document.getElementById('partner-id').value;
-  if (!partnerId) return;
-  conn = peer.connect(partnerId);
-  myRole = 'X'; // Creator becomes Player X
-  setupConnection();
-  document.getElementById('status').innerText = "Connected! Your turn (Player X).";
-}
-
-function setupConnection() {
-  document.getElementById('connection-status').innerText = "Status: Connected ❤️";
-  conn.on('data', (data) => {
-    if (data.type === 'move') {
-      applyMove(data.index, data.player);
-    } else if (data.type === 'reset') {
-      localReset();
-    }
-  });
-}
-
-// Game Logic
 let boardState = ['', '', '', '', '', '', '', '', ''];
 let currentPlayer = 'X';
 let gameActive = true;
@@ -54,24 +22,75 @@ const winningConditions = [
   [0, 4, 8], [2, 4, 6]
 ];
 
+peer.on('open', (id) => {
+  document.getElementById('my-id').innerText = id;
+});
+
+peer.on('connection', (connection) => {
+  conn = connection;
+  myRole = 'O'; // Host becomes Player O
+  setupConnection();
+  document.getElementById('status').innerText = "Connected! You are Player O. Waiting for Player X...";
+});
+
+function connectToPartner() {
+  const partnerId = document.getElementById('partner-id').value.trim();
+  if (!partnerId) return;
+  conn = peer.connect(partnerId);
+  myRole = 'X'; // Joiner becomes Player X
+  setupConnection();
+  document.getElementById('status').innerText = "Connected! You are Player X. It's your turn!";
+}
+
+function setupConnection() {
+  document.getElementById('connection-status').innerText = "Status: Connected ❤️";
+  
+  conn.on('data', (data) => {
+    if (data.type === 'sync') {
+      boardState = data.boardState;
+      currentPlayer = data.currentPlayer;
+      gameActive = data.gameActive;
+      updateUI();
+      checkResult();
+    }
+  });
+}
+
 function makeMove(index) {
   if (boardState[index] !== '' || !gameActive) return;
+  
   if (conn && currentPlayer !== myRole) {
-    alert("It's not your turn!");
+    alert(`It's Player ${currentPlayer}'s turn! You are Player ${myRole}.`);
     return;
   }
 
-  applyMove(index, currentPlayer);
+  boardState[index] = currentPlayer;
+  currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
 
+  updateUI();
+  checkResult();
+  sendSync();
+}
+
+function sendSync() {
   if (conn) {
-    conn.send({ type: 'move', index: index, player: currentPlayer });
+    conn.send({
+      type: 'sync',
+      boardState: boardState,
+      currentPlayer: currentPlayer,
+      gameActive: gameActive
+    });
   }
 }
 
-function applyMove(index, player) {
-  boardState[index] = player;
-  document.getElementsByClassName('cell')[index].innerText = player;
-  checkResult();
+function updateUI() {
+  const cells = document.getElementsByClassName('cell');
+  for (let i = 0; i < 9; i++) {
+    cells[i].innerText = boardState[i];
+  }
+  if (gameActive) {
+    document.getElementById('status').innerText = `Player ${currentPlayer}'s Turn (You are ${myRole || 'X'})`;
+  }
 }
 
 function checkResult() {
@@ -85,7 +104,8 @@ function checkResult() {
   }
 
   if (roundWon) {
-    document.getElementById('status').innerText = `Player ${currentPlayer} Wins! 💕`;
+    const winner = currentPlayer === 'X' ? 'O' : 'X';
+    document.getElementById('status').innerText = `Player ${winner} Wins! 💕`;
     gameActive = false;
     return;
   }
@@ -95,22 +115,13 @@ function checkResult() {
     gameActive = false;
     return;
   }
-
-  currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-  document.getElementById('status').innerText = `Player ${currentPlayer}'s Turn`;
 }
 
 function resetGame() {
-  localReset();
-  if (conn) {
-    conn.send({ type: 'reset' });
-  }
-}
-
-function localReset() {
   boardState = ['', '', '', '', '', '', '', '', ''];
   currentPlayer = 'X';
   gameActive = true;
-  document.getElementById('status').innerText = "Player X's Turn";
-  Array.from(document.getElementsByClassName('cell')).forEach(cell => cell.innerText = '');
+  updateUI();
+  document.getElementById('status').innerText = "Game Restarted! Player X's Turn";
+  sendSync();
 }
