@@ -166,13 +166,18 @@ function lockSecretNumber() {
   if (myDuelRole === 'Aryan') updateObj.aryanSecret = val;
   else updateObj.teresaSecret = val;
 
+  // Ensure currentTurn defaults to Aryan if unset
+  if (!duelData.currentTurn) updateObj.currentTurn = 'Aryan';
+
   roomRef.child('secretDuel').update(updateObj);
   document.getElementById('secret-status').innerText = "Status: Secret number locked! Waiting for partner...";
 }
 
 function submitDuelGuess() {
+  const turn = duelData.currentTurn || 'Aryan';
+
   if (duelData.winner) return alert("The game is over! Reset to play again.");
-  if (duelData.currentTurn !== myDuelRole) return alert(`It's ${duelData.currentTurn}'s turn to guess!`);
+  if (turn !== myDuelRole) return alert(`It's ${turn}'s turn to guess!`);
 
   const guessVal = parseInt(document.getElementById('guess-input').value);
   if (isNaN(guessVal) || guessVal < 1 || guessVal > 100) return alert("Enter a valid number between 1 and 100!");
@@ -194,7 +199,7 @@ function submitDuelGuess() {
   document.getElementById('guess-input').value = '';
 
   roomRef.child('secretDuel').update({
-    currentTurn: winner ? duelData.currentTurn : nextTurn,
+    currentTurn: winner ? turn : nextTurn,
     feedback: feedbackText,
     winner: winner
   });
@@ -203,6 +208,7 @@ function submitDuelGuess() {
 function updateDuelUI() {
   const aryanReady = duelData.aryanSecret !== undefined && duelData.aryanSecret !== null;
   const teresaReady = duelData.teresaSecret !== undefined && duelData.teresaSecret !== null;
+  const turn = duelData.currentTurn || 'Aryan';
 
   if (aryanReady && teresaReady) {
     document.getElementById('set-number-box').classList.add('hidden-section');
@@ -211,7 +217,11 @@ function updateDuelUI() {
     if (duelData.winner) {
       document.getElementById('turn-indicator').innerText = `Game Over! 🎉 ${duelData.winner} Wins!`;
     } else {
-      document.getElementById('turn-indicator').innerText = `Turn: ${duelData.currentTurn}'s turn to guess!`;
+      if (turn === myDuelRole) {
+        document.getElementById('turn-indicator').innerText = `Make your guess!`;
+      } else {
+        document.getElementById('turn-indicator').innerText = `Waiting for ${turn} to guess...`;
+      }
     }
   } else {
     document.getElementById('set-number-box').classList.remove('hidden-section');
