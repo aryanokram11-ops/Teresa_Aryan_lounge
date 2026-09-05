@@ -81,6 +81,19 @@ function backToGameList() {
   document.getElementById('game-selection-menu').classList.remove('hidden-section');
 }
 
+// Widget minimize/collapse feature
+function toggleWidgetCollapse() {
+  const body = document.getElementById('video-chat-body');
+  const icon = document.getElementById('collapse-icon');
+  if (body.style.display === 'none') {
+    body.style.display = 'flex';
+    icon.innerText = '▲';
+  } else {
+    body.style.display = 'none';
+    icon.innerText = '▼';
+  }
+}
+
 // Firebase Configuration
 const firebaseConfig = {
   databaseURL: "https://assistant-98715-default-rtdb.firebaseio.com"
@@ -95,7 +108,6 @@ let currentPartnerCode = "love-lounge";
 let roomRef = db.ref('rooms/' + currentPartnerCode);
 let myPresenceRef = null;
 
-// Unique Client ID for exclusive role locking
 let myClientId = localStorage.getItem('lounge_client_id');
 if (!myClientId) {
   myClientId = 'client_' + Math.random().toString(36).substr(2, 9);
@@ -127,7 +139,6 @@ let duelData = {
   roles: {}
 };
 
-// Initialize role UI states on load
 window.addEventListener('DOMContentLoaded', () => {
   if (myRole) {
     document.getElementById('ttt-select-box').classList.add('hidden-section');
@@ -326,7 +337,6 @@ function resetGame() {
   });
 }
 
-// Wholesome, Cute, & Short Roasts for Secret Number Duel
 const lowRoasts = [
   "Way too low! Even a sleepy little kitten jumps higher than that! 🐾",
   "Too low, cutie! My hugs are warmer than that guess! 🤗",
@@ -344,7 +354,6 @@ const closeRoasts = [
   "So close! My heart skipped a beat thinking you got it! 💓"
 ];
 
-// Secret Number Duel Functions
 function lockSecretNumber() {
   if (!myDuelRole) return alert("Please select whether you are Aryan or Teresa first!");
   const val = parseInt(document.getElementById('secret-input').value);
@@ -497,10 +506,11 @@ function resetDuelGame() {
   document.getElementById('secret-input').value = '';
 }
 
-// WebRTC Peer Connection Configuration for Video/Voice Chat
+// Fixed & Fully Robust WebRTC Signaling Logic
 let localStream;
 let remoteStream;
 let peerConnection;
+let isInitiator = false;
 
 const rtcConfig = {
   iceServers: [
@@ -512,86 +522,93 @@ const rtcConfig = {
 async function startCall() {
   playSound('click');
   document.getElementById('call-btn').innerText = "Connecting...";
-  
+
   try {
-    // 1. Get local audio and video
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     document.getElementById('local-video').srcObject = localStream;
 
-    peerConnection = new RTCPeerConnection(rtcConfig);
+    createPeerConnection();
 
-    // 2. Add local tracks to peer connection
-    localStream.getTracks().forEach(track => {
-      peerConnection.addTrack(track, localStream);
-    });
-
-    // 3. Receive remote tracks
-    remoteStream = new MediaStream();
-    document.getElementById('remote-video').srcObject = remoteStream;
-    peerConnection.ontrack = (event) => {
-      event.streams[0].getTracks().forEach(track => {
-        remoteStream.addTrack(track);
-      });
-    };
-
-    // 4. Handle ICE candidates via Firebase Signaling
-    peerConnection.onicecandidate = (event) => {
-      if (event.candidate) {
-        roomRef.child('signals/candidates').push(JSON.stringify(event.candidate));
+    // Determine role by trying to claim the offer slot atomically or checking who's there
+    roomRef.child('signals/caller').transaction((currentCaller) => {
+      if (!currentCaller) {
+        return myClientId;
       }
-    };
-
-    // Check if we are caller or callee based on client ID or room setup
-    const callRef = roomRef.child('signals/offer');
-    callRef.once('value', async (snapshot) => {
-      const offer = snapshot.val();
-      if (!offer) {
-        // We are the Caller (Initiator)
-        const offerDescription = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offerDescription);
-        roomRef.child('signals/offer').set({
-          type: offerDescription.type,
-          sdp: offerDescription.sdp
-        });
+      return currentCaller;
+    }, async (error, committed, snapshot) => {
+      if (error) {
+        console.error("Signaling error:", error);
+      } else if (snapshot.val() === myClientId) {
+        // We are the Caller
+        isInitiator = true;
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        roomRef.child('signals/offer').set({ type: offer.type, sdp: offer.sdp });
         document.getElementById('call-btn').innerText = "Waiting...";
       } else {
-        // We are the Callee (Receiver)
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-        const answerDescription = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answerDescription);
-        roomRef.child('signals/answer').set({
-          type: answerDescription.type,
-          sdp: answerDescription.sdp
+        // We are the Callee, listen for existing offer
+        isInitiator = false;
+        roomRef.child('signals/offer').once('value', async (offSnap) => {
+          const offer = offSnap.val();
+          if (offer && !peerConnection.remoteDescription) {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            roomRef.child('signals/answer').set({ type: answer.type, sdp: answer.sdp });
+            document.getElementById('call-btn').innerText = "Connected! 💖";
+          }
         });
-        document.getElementById('call-btn').innerText = "Connected! 💖";
       }
     });
 
-    // Listen for answer if we created the offer
+    // Listen for answer if caller
     roomRef.child('signals/answer').on('value', async (snapshot) => {
       const answer = snapshot.val();
-      if (answer && !peerConnection.currentRemoteDescription && peerConnection.signalingState === "have-local-offer") {
+      if (answer && isInitiator && !peerConnection.currentRemoteDescription) {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
         document.getElementById('call-btn').innerText = "Connected! 💖";
       }
     });
 
-    // Listen for incoming ICE candidates
+    // Listen for ICE candidates from partner
     roomRef.child('signals/candidates').on('child_added', (snapshot) => {
       const candidateData = JSON.parse(snapshot.val());
-      if (peerConnection && peerConnection.remoteDescription) {
+      // Prevent adding own candidates
+      if (snapshot.key !== myClientId && peerConnection) {
         peerConnection.addIceCandidate(new RTCIceCandidate(candidateData)).catch(e => console.error(e));
       }
     });
 
-  } catch (error) {
-    console.error("Error accessing media devices.", error);
+  } catch (err) {
+    console.error("Media access error:", err);
     alert("Could not access camera or microphone. Please check permissions!");
     document.getElementById('call-btn').innerText = "Connect";
   }
 }
 
-// Toggle Mic Mute / Unmute
+function createPeerConnection() {
+  peerConnection = new RTCPeerConnection(rtcConfig);
+
+  localStream.getTracks().forEach(track => {
+    peerConnection.addTrack(track, localStream);
+  });
+
+  remoteStream = new MediaStream();
+  document.getElementById('remote-video').srcObject = remoteStream;
+
+  peerConnection.ontrack = (event) => {
+    event.streams[0].getTracks().forEach(track => {
+      remoteStream.addTrack(track);
+    });
+  };
+
+  peerConnection.onicecandidate = (event) => {
+    if (event.candidate) {
+      roomRef.child('signals/candidates').push(JSON.stringify(event.candidate));
+    }
+  };
+}
+
 function toggleAudio() {
   if (!localStream) return;
   const audioTrack = localStream.getAudioTracks()[0];
@@ -601,7 +618,6 @@ function toggleAudio() {
   }
 }
 
-// Toggle Camera On / Off
 function toggleVideo() {
   if (!localStream) return;
   const videoTrack = localStream.getVideoTracks()[0];

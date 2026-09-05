@@ -174,22 +174,28 @@
     </section>
   </main>
 
-  <!-- Video & Voice Chat Floating Widget -->
+  <!-- Clean, Modern Floating Video & Voice Chat Widget -->
   <div id="video-chat-container" class="video-chat-box">
-    <div class="video-streams">
-      <div class="video-wrapper">
-        <video id="remote-video" autoplay playsinline></video>
-        <span class="video-label">Partner ❤️</span>
-      </div>
-      <div class="video-wrapper">
-        <video id="local-video" autoplay playsinline muted></video>
-        <span class="video-label">You</span>
-      </div>
+    <div class="video-chat-header" onclick="toggleWidgetCollapse()">
+      <span>📹 Video Lounge ❤️</span>
+      <span id="collapse-icon">▲</span>
     </div>
-    <div class="chat-controls">
-      <button type="button" onclick="toggleAudio()" id="audio-btn">🎤 Mute</button>
-      <button type="button" onclick="toggleVideo()" id="video-btn">📹 Cam Off</button>
-      <button type="button" onclick="startCall()" id="call-btn" style="background: #2ed573;">Connect</button>
+    <div id="video-chat-body" class="video-chat-body">
+      <div class="video-streams">
+        <div class="video-wrapper">
+          <video id="remote-video" autoplay playsinline></video>
+          <span class="video-label">Partner ❤️</span>
+        </div>
+        <div class="video-wrapper">
+          <video id="local-video" autoplay playsinline muted></video>
+          <span class="video-label">You</span>
+        </div>
+      </div>
+      <div class="chat-controls">
+        <button type="button" onclick="toggleAudio()" id="audio-btn">🎤 Mute</button>
+        <button type="button" onclick="toggleVideo()" id="video-btn">📹 Cam Off</button>
+        <button type="button" onclick="startCall()" id="call-btn" style="background: #2ed573;">Connect</button>
+      </div>
     </div>
   </div>
 
