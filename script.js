@@ -55,7 +55,9 @@ let duelData = {
   teresaSecret: null,
   currentTurn: 'Aryan',
   feedback: 'Set your secret numbers to begin!',
-  winner: null
+  winner: null,
+  aryanHistory: [],
+  teresaHistory: []
 };
 
 function setRole(role) {
@@ -166,7 +168,6 @@ function lockSecretNumber() {
   if (myDuelRole === 'Aryan') updateObj.aryanSecret = val;
   else updateObj.teresaSecret = val;
 
-  // Ensure currentTurn defaults to Aryan if unset
   if (!duelData.currentTurn) updateObj.currentTurn = 'Aryan';
 
   roomRef.child('secretDuel').update(updateObj);
@@ -185,23 +186,38 @@ function submitDuelGuess() {
   const target = myDuelRole === 'Aryan' ? duelData.teresaSecret : duelData.aryanSecret;
   const nextTurn = myDuelRole === 'Aryan' ? 'Teresa' : 'Aryan';
   let feedbackText = "";
+  let hint = "";
   let winner = null;
 
   if (guessVal === target) {
     feedbackText = `🎉 ${myDuelRole} guessed ${guessVal} correctly and WINS! 💕`;
+    hint = "CORRECT 🎉";
     winner = myDuelRole;
   } else if (guessVal < target) {
     feedbackText = `${myDuelRole} guessed ${guessVal} — Too Low!`;
+    hint = "Too Low ⬇️";
   } else {
     feedbackText = `${myDuelRole} guessed ${guessVal} — Too High!`;
+    hint = "Too High ⬆️";
   }
 
   document.getElementById('guess-input').value = '';
 
+  const aryanHistory = duelData.aryanHistory || [];
+  const teresaHistory = duelData.teresaHistory || [];
+
+  if (myDuelRole === 'Aryan') {
+    aryanHistory.push(`${guessVal} (${hint})`);
+  } else {
+    teresaHistory.push(`${guessVal} (${hint})`);
+  }
+
   roomRef.child('secretDuel').update({
     currentTurn: winner ? turn : nextTurn,
     feedback: feedbackText,
-    winner: winner
+    winner: winner,
+    aryanHistory: aryanHistory,
+    teresaHistory: teresaHistory
   });
 }
 
@@ -236,6 +252,13 @@ function updateDuelUI() {
   }
 
   document.getElementById('guess-feedback').innerText = duelData.feedback || 'No guesses made yet.';
+
+  // Update History Lists
+  const aryanList = document.getElementById('aryan-history');
+  const teresaList = document.getElementById('teresa-history');
+
+  aryanList.innerHTML = (duelData.aryanHistory || []).map(item => `<li>${item}</li>`).join('');
+  teresaList.innerHTML = (duelData.teresaHistory || []).map(item => `<li>${item}</li>`).join('');
 }
 
 function resetDuelGame() {
@@ -244,7 +267,9 @@ function resetDuelGame() {
     teresaSecret: null,
     currentTurn: 'Aryan',
     feedback: 'Game Reset! Lock in your secret numbers.',
-    winner: null
+    winner: null,
+    aryanHistory: [],
+    teresaHistory: []
   });
   document.getElementById('secret-input').value = '';
 }

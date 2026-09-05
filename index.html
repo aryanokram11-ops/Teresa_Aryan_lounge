@@ -106,7 +106,7 @@
         <!-- Phase 2: Guessing Duel -->
         <div id="guess-duel-box" class="duel-box hidden-section">
           <h3>Step 2: Guessing Phase</h3>
-          <p id="turn-indicator">Waiting for both players to lock numbers...</p>
+          <p id="turn-indicator">Make your guess!</p>
 
           <div class="guess-controls">
             <input type="number" id="guess-input" placeholder="Enter guess (1-100)" min="1" max="100">
@@ -114,6 +114,18 @@
           </div>
 
           <p id="guess-feedback">No guesses made yet.</p>
+
+          <!-- Player History Boxes -->
+          <div class="history-container" style="display: flex; justify-content: space-around; gap: 10px; margin-top: 15px;">
+            <div id="aryan-history-box" style="flex: 1; background: #fff5f6; padding: 10px; border-radius: 8px; border: 1px solid #ffccd5; max-height: 150px; overflow-y: auto;">
+              <h4 style="margin: 0 0 8px 0; color: #ff6b81;">Aryan's Guesses</h4>
+              <ul id="aryan-history" style="list-style: none; padding: 0; margin: 0; font-size: 0.9rem;"></ul>
+            </div>
+            <div id="teresa-history-box" style="flex: 1; background: #fff5f6; padding: 10px; border-radius: 8px; border: 1px solid #ffccd5; max-height: 150px; overflow-y: auto;">
+              <h4 style="margin: 0 0 8px 0; color: #ff6b81;">Teresa's Guesses</h4>
+              <ul id="teresa-history" style="list-style: none; padding: 0; margin: 0; font-size: 0.9rem;"></ul>
+            </div>
+          </div>
         </div>
 
         <button type="button" class="reset-btn" onclick="resetDuelGame()">Reset Secret Duel</button>
