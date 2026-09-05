@@ -14,8 +14,7 @@ function showSection(sectionId) {
     moviesSection.classList.remove('active-section');
   }
 }
-
-// Database Config
+// Database Config with YOUR project's exact URL
 const firebaseConfig = {
   databaseURL: "https://assistant-98715-default-rtdb.firebaseio.com"
 };
