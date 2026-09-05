@@ -10,7 +10,7 @@ function showSection(sectionId) {
 // PeerJS Setup
 let peer = new Peer();
 let conn = null;
-let myRole = ''; // 'X' or 'O'
+let myRole = 'X'; // Default role
 
 let boardState = ['', '', '', '', '', '', '', '', ''];
 let currentPlayer = 'X';
@@ -28,18 +28,19 @@ peer.on('open', (id) => {
 
 peer.on('connection', (connection) => {
   conn = connection;
-  myRole = 'O'; // Host becomes Player O
   setupConnection();
-  document.getElementById('status').innerText = "Connected! You are Player O. Waiting for Player X...";
 });
+
+function setRole(role) {
+  myRole = role;
+  document.getElementById('role-display').innerText = `You are playing as: ${myRole}`;
+}
 
 function connectToPartner() {
   const partnerId = document.getElementById('partner-id').value.trim();
   if (!partnerId) return;
   conn = peer.connect(partnerId);
-  myRole = 'X'; // Joiner becomes Player X
   setupConnection();
-  document.getElementById('status').innerText = "Connected! You are Player X. It's your turn!";
 }
 
 function setupConnection() {
@@ -89,7 +90,7 @@ function updateUI() {
     cells[i].innerText = boardState[i];
   }
   if (gameActive) {
-    document.getElementById('status').innerText = `Player ${currentPlayer}'s Turn (You are ${myRole || 'X'})`;
+    document.getElementById('status').innerText = `Player ${currentPlayer}'s Turn`;
   }
 }
 
