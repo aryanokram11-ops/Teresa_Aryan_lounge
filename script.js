@@ -1,4 +1,60 @@
+// Web Audio API Synthesized Meme Sound Generator
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+
+function initAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+}
+
+function playSound(type) {
+  initAudio();
+  if (!audioCtx) return;
+
+  const now = audioCtx.currentTime;
+
+  if (type === 'click') {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.05);
+  } else if (type === 'win') {
+    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+    notes.forEach((freq, idx) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.2, now + idx * 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.1 + 0.25);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now + idx * 0.1);
+      osc.stop(now + idx * 0.1 + 0.25);
+    });
+  } else if (type === 'wrong') {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(220, now);
+    osc.frequency.linearRampToValueAtTime(110, now + 0.3);
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.3);
+  }
+}
+
 function showSection(sectionId) {
+  playSound('click');
   document.querySelectorAll('main > section').forEach(sec => {
     sec.classList.add('hidden-section');
     sec.classList.remove('active-section');
@@ -8,6 +64,7 @@ function showSection(sectionId) {
 }
 
 function selectGame(gameId) {
+  playSound('click');
   document.getElementById('game-selection-menu').classList.add('hidden-section');
   document.querySelectorAll('.game-screen').forEach(screen => screen.classList.add('hidden-section'));
 
@@ -19,6 +76,7 @@ function selectGame(gameId) {
 }
 
 function backToGameList() {
+  playSound('click');
   document.querySelectorAll('.game-screen').forEach(screen => screen.classList.add('hidden-section'));
   document.getElementById('game-selection-menu').classList.remove('hidden-section');
 }
@@ -61,11 +119,13 @@ let duelData = {
 };
 
 function setRole(role) {
+  playSound('click');
   myRole = role;
   document.getElementById('role-display').innerText = `You are playing as: ${myRole}`;
 }
 
 function setDuelPlayer(role) {
+  playSound('click');
   myDuelRole = role;
   document.getElementById('duel-identity').innerText = `You are playing as: ${role}`;
   updateDuelUI();
@@ -93,6 +153,7 @@ function listenToRoom() {
 }
 
 function joinRoom() {
+  playSound('click');
   const inputCode = document.getElementById('room-input').value.trim();
   if (!inputCode) return alert("Please enter a room code!");
   
@@ -108,6 +169,7 @@ function makeMove(index) {
   if (boardState[index] !== '' || !gameActive) return;
   if (currentPlayer !== myRole) return alert(`It's Player ${currentPlayer}'s turn! You are Player ${myRole}.`);
 
+  playSound('click');
   boardState[index] = currentPlayer;
   const nextPlayer = currentPlayer === 'X' ? 'O' : 'X';
 
@@ -142,16 +204,19 @@ function checkResult() {
     const winner = currentPlayer === 'X' ? 'O' : 'X';
     document.getElementById('status').innerText = `Player ${winner} Wins! 💕`;
     gameActive = false;
+    playSound('win');
     return;
   }
 
   if (!boardState.includes('')) {
     document.getElementById('status').innerText = "It's a Draw!";
     gameActive = false;
+    playSound('wrong');
   }
 }
 
 function resetGame() {
+  playSound('click');
   roomRef.child('ticTacToe').set({
     boardState: ['', '', '', '', '', '', '', '', ''],
     currentPlayer: 'X',
@@ -164,6 +229,7 @@ function lockSecretNumber() {
   const val = parseInt(document.getElementById('secret-input').value);
   if (isNaN(val) || val < 1 || val > 100) return alert("Enter a valid number between 1 and 100!");
 
+  playSound('click');
   const updateObj = {};
   if (myDuelRole === 'Aryan') updateObj.aryanSecret = val;
   else updateObj.teresaSecret = val;
@@ -193,12 +259,15 @@ function submitDuelGuess() {
     feedbackText = `🎉 ${myDuelRole} guessed ${guessVal} correctly and WINS! 💕`;
     hint = "CORRECT 🎉";
     winner = myDuelRole;
+    playSound('win');
   } else if (guessVal < target) {
     feedbackText = `${myDuelRole} guessed ${guessVal} — Too Low!`;
     hint = "Too Low ⬇️";
+    playSound('wrong');
   } else {
     feedbackText = `${myDuelRole} guessed ${guessVal} — Too High!`;
     hint = "Too High ⬆️";
+    playSound('wrong');
   }
 
   document.getElementById('guess-input').value = '';
@@ -253,7 +322,6 @@ function updateDuelUI() {
 
   document.getElementById('guess-feedback').innerText = duelData.feedback || 'No guesses made yet.';
 
-  // Update History Lists
   const aryanList = document.getElementById('aryan-history');
   const teresaList = document.getElementById('teresa-history');
 
@@ -262,6 +330,7 @@ function updateDuelUI() {
 }
 
 function resetDuelGame() {
+  playSound('click');
   roomRef.child('secretDuel').set({
     aryanSecret: null,
     teresaSecret: null,

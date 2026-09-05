@@ -1,19 +1,23 @@
 :root {
-  --bg-color: #fdf2f4;
-  --card-bg: #ffffff;
-  --primary: #ff6b81;
+  --bg-gradient: linear-gradient(135deg, #ffdde1 0%, #ee9ca7 100%);
+  --card-bg: rgba(255, 255, 255, 0.92);
+  --primary: #ff4757;
+  --secondary: #ff6b81;
+  --accent: #ffa502;
   --text: #2f3542;
 }
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: var(--bg-color);
+  background: var(--bg-gradient);
+  background-attachment: fixed;
   color: var(--text);
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-height: 100vh;
 }
 
 header {
@@ -24,36 +28,49 @@ header {
 }
 
 h1 {
-  color: var(--primary);
+  color: #ffffff;
+  text-shadow: 2px 2px 8px rgba(255, 71, 87, 0.6);
   margin-bottom: 1rem;
+  font-size: 2.5rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
 }
 
 nav {
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 nav button {
-  background-color: var(--primary);
-  color: white;
+  background: white;
+  color: var(--primary);
   border: none;
-  padding: 10px 18px;
-  border-radius: 20px;
+  padding: 12px 22px;
+  border-radius: 25px;
   cursor: pointer;
   font-weight: bold;
-  transition: transform 0.2s, background-color 0.2s;
+  font-size: 1rem;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
 }
 
 nav button:hover {
-  background-color: #ff4757;
-  transform: translateY(-2px);
+  background: var(--primary);
+  color: white;
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(255, 71, 87, 0.4);
 }
 
 main {
   width: 90%;
   max-width: 800px;
   margin-top: 1rem;
+  margin-bottom: 2rem;
   position: relative;
   z-index: 1;
 }
@@ -66,9 +83,9 @@ main {
   padding-bottom: 56.25%;
   height: 0;
   overflow: hidden;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  z-index: 1;
+  border-radius: 16px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  border: 4px solid white;
 }
 
 .video-container iframe {
@@ -79,69 +96,89 @@ main {
 }
 
 .multiplayer-box, .duel-box {
-  background: white;
-  padding: 15px;
-  border-radius: 10px;
+  background: var(--card-bg);
+  backdrop-filter: blur(8px);
+  padding: 20px;
+  border-radius: 16px;
   margin-bottom: 20px;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  border: 2px solid rgba(255, 255, 255, 0.8);
 }
 
 .room-row, .role-row, .guess-controls {
-  margin-bottom: 12px;
+  margin-bottom: 15px;
 }
 
 .multiplayer-box input, .guess-controls input, .duel-box input {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  margin-right: 5px;
+  padding: 10px 14px;
+  border: 2px solid #ffccd5;
+  border-radius: 10px;
+  margin-right: 8px;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.multiplayer-box input:focus, .guess-controls input:focus, .duel-box input:focus {
+  border-color: var(--primary);
 }
 
 .multiplayer-box button, .guess-controls button, .game-card button, .duel-box button {
-  background: var(--primary);
+  background: linear-gradient(135deg, #ff6b81, #ff4757);
   color: white;
   border: none;
-  padding: 8px 12px;
-  border-radius: 5px;
+  padding: 10px 16px;
+  border-radius: 10px;
   cursor: pointer;
+  font-weight: bold;
+  box-shadow: 0 3px 10px rgba(255, 71, 87, 0.3);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.multiplayer-box button:hover, .guess-controls button:hover, .duel-box button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 71, 87, 0.5);
 }
 
 #room-status, #guess-feedback, #secret-status, #turn-indicator {
   color: var(--primary);
   font-weight: bold;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
 }
 
-#game-selection-menu {
-  text-align: center;
+#game-selection-menu h2, .game-screen h2 {
+  color: white;
+  text-shadow: 1px 1px 4px rgba(0,0,0,0.2);
 }
 
 .game-list {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 18px;
   margin-top: 15px;
 }
 
 .game-card {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  background: var(--card-bg);
+  padding: 22px;
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
   text-align: center;
+  border: 2px solid white;
 }
 
 .game-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 15px rgba(255,107,129,0.2);
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 10px 25px rgba(255,107,129,0.3);
 }
 
 .game-card h3 {
   margin: 0 0 8px 0;
   color: var(--primary);
+  font-size: 1.3rem;
 }
 
 .game-card p {
@@ -154,19 +191,27 @@ main {
 }
 
 .back-btn {
-  background: #747d8c;
-  color: white;
+  background: white;
+  color: #57606f;
   border: none;
-  padding: 8px 14px;
+  padding: 8px 18px;
   border-radius: 20px;
   cursor: pointer;
+  font-weight: bold;
   margin-bottom: 15px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.2s;
+}
+
+.back-btn:hover {
+  background: #f1f2f6;
+  transform: translateX(-3px);
 }
 
 .board {
   display: grid;
   grid-template-columns: repeat(3, 100px);
-  grid-gap: 8px;
+  grid-gap: 10px;
   justify-content: center;
   margin: 20px auto;
 }
@@ -174,24 +219,35 @@ main {
 .cell {
   width: 100px;
   height: 100px;
-  background-color: var(--card-bg);
-  border-radius: 8px;
+  background-color: white;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.5rem;
+  font-size: 2.8rem;
   font-weight: bold;
   color: var(--primary);
   cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  transition: transform 0.15s;
+}
+
+.cell:hover {
+  transform: scale(1.05);
 }
 
 .reset-btn {
   background: var(--text);
   color: white;
   border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
   cursor: pointer;
-  margin-top: 10px;
+  font-weight: bold;
+  margin-top: 15px;
+  transition: background 0.2s;
+}
+
+.reset-btn:hover {
+  background: #57606f;
 }
