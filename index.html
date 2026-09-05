@@ -10,7 +10,11 @@
 </head>
 <body>
 
+  <!-- Floating Hearts Background -->
   <div id="hearts-bg"></div>
+
+  <!-- Floating Dog Meme Rain Container -->
+  <div id="meme-rain-container"></div>
 
   <header>
     <div class="header-top-row">
@@ -40,6 +44,7 @@
   </header>
 
   <main>
+    <!-- ================= WATCH PARTY TAB ================= -->
     <section id="watch-party-hub" class="active-section">
       
       <div class="watchparty-header-bar">
@@ -60,31 +65,11 @@
         </div>
 
         <div class="watchparty-sidebar">
-          <div class="sidebar-widget video-call-widget">
-            <h3>📹 Live Video & Voice Call</h3>
-            <div class="video-grids">
-              <div class="video-card">
-                <video id="local-video" autoplay playsinline muted></video>
-                <span class="video-label">You 🐶</span>
-              </div>
-              <div class="video-card" id="remote-video-card">
-                <video id="remote-video" autoplay playsinline></video>
-                <span class="video-label">Partner 💖</span>
-              </div>
-            </div>
-            
-            <div id="controls-wrapper">
-              <div class="call-controls">
-                <button class="call-btn" onclick="startCall()">Connect Call</button>
-              </div>
-            </div>
-          </div>
-
           <div class="sidebar-widget chat-widget">
             <h3>💬 Love Chat & Media</h3>
             <div id="chat-messages-container"></div>
             <div class="chat-input-row">
-              <input type="text" id="chat-text-input" placeholder="Say something sweet..." onkeydown="handleChatKeyDown(event)">
+              <input type="text" id="chat-text-input" placeholder="Say something sweet... (Type 'I love you' 3x for Co-Host!)" onkeydown="handleChatKeyDown(event)">
               <label for="chat-media-file" class="media-upload-btn" title="Upload Image">📷</label>
               <input type="file" id="chat-media-file" accept="image/*" class="hidden-section" onchange="handleMediaUpload(event)">
               <button onclick="sendChatMessage()">Send 💕</button>
@@ -94,6 +79,7 @@
       </div>
     </section>
 
+    <!-- ================= GAMES ARCADE TAB ================= -->
     <section id="games-hub" class="hidden-section">
       <div id="game-selection-menu">
         <h2>Choose a Date Night Game! 🐾</h2>
@@ -106,9 +92,14 @@
             <h3>🦴 Secret Number Duel</h3>
             <p>Guess your partner's secret bone number!</p>
           </div>
+          <div class="game-card" onclick="selectGame('rps')">
+            <h3>🐾 Paws & Claws RPS</h3>
+            <p>Epic Rock-Paper-Scissors battle with flying dog memes!</p>
+          </div>
         </div>
       </div>
 
+      <!-- Tic-Tac-Toe Game Screen -->
       <div id="tictactoe-game" class="game-screen hidden-section">
         <button class="back-link" onclick="backToGameList()">← Back to Games</button>
         <h2>Tic-Tac-Toe 🐾</h2>
@@ -136,6 +127,7 @@
         <button class="reset-btn" onclick="resetGame()">Reset Game 🦴</button>
       </div>
 
+      <!-- Secret Number Duel Game Screen -->
       <div id="guessing-game" class="game-screen hidden-section">
         <button class="back-link" onclick="backToGameList()">← Back to Games</button>
         <h2>Secret Number Duel 🦴</h2>
@@ -177,13 +169,45 @@
           </div>
         </div>
       </div>
+
+      <!-- Paws & Claws Interactive RPS Game Screen -->
+      <div id="rps-game" class="game-screen hidden-section">
+        <button class="back-link" onclick="backToGameList()">← Back to Games</button>
+        <h2>🐾 Paws & Claws RPS Arena ⚔️</h2>
+        <div id="rps-arena-container">
+          <div id="rps-status-msg">Choose your battle weapon! 🐶</div>
+          <div class="rps-battle-arena">
+            <div class="rps-fighter-card">
+              <span class="fighter-title">You 🐾</span>
+              <div id="my-rps-avatar" class="fighter-avatar">🐶❓</div>
+              <div id="my-rps-choice-text" class="fighter-choice-label">Not chosen</div>
+            </div>
+            <div class="rps-vs-badge">VS 🔥</div>
+            <div class="rps-fighter-card">
+              <span class="fighter-title">Partner 💖</span>
+              <div id="partner-rps-avatar" class="fighter-avatar">🐕❓</div>
+              <div id="partner-rps-choice-text" class="fighter-choice-label">Waiting...</div>
+            </div>
+          </div>
+
+          <div class="rps-action-buttons">
+            <button class="rps-move-btn" onclick="submitInteractiveRps('Rock')">✊ Rock (Bone!)</button>
+            <button class="rps-move-btn" onclick="submitInteractiveRps('Paper')">✋ Paper (Leash!)</button>
+            <button class="rps-move-btn" onclick="submitInteractiveRps('Scissors')">✌️ Scissors (Claw!)</button>
+          </div>
+
+          <div id="rps-outcome-banner" class="hidden-section"></div>
+          <button class="reset-btn hidden-section" id="rps-replay-btn" onclick="resetInteractiveRps()">Battle Again 🐾</button>
+        </div>
+      </div>
     </section>
   </main>
 
+  <!-- ================= HOST BATTLE MODAL ================= -->
   <div id="rps-modal" class="modal-overlay hidden-section">
     <div class="modal-content">
       <h2>⚔️ Rock Paper Scissors Battle</h2>
-      <p>Winner takes the <strong>Host Crown</strong> and controls playback!</p>
+      <p>Winner takes the <strong>Host Crown</strong> (Or type "I love you" 3x in chat for Co-Host!)</p>
       <div id="rps-choices" class="rps-buttons-row">
         <button onclick="playRps('Rock')">✊ Rock</button>
         <button onclick="playRps('Paper')">✋ Paper</button>
@@ -191,6 +215,32 @@
       </div>
       <div id="rps-result-display" class="rps-result-box">Make your choice to settle who hosts!</div>
       <button class="close-modal-btn" onclick="closeRpsModal()">Close ❌</button>
+    </div>
+  </div>
+
+  <!-- ================= PERSISTENT GLOBAL FLOATING VOICE & VIDEO CALL ================= -->
+  <div id="floating-call-widget" class="floating-call-container">
+    <div class="floating-call-header" onmousedown="startDrag(event)">
+      <span>🐾 Puppy Voice & Video Call 🎙️</span>
+      <button onclick="toggleMinimizeCall()" id="minimize-call-btn" title="Minimize / Expand">🗕</button>
+    </div>
+    <div id="floating-call-body" class="floating-call-body">
+      <div class="video-grids">
+        <div class="video-card">
+          <video id="local-video" autoplay playsinline muted></video>
+          <span class="video-label">You 🐶</span>
+        </div>
+        <div class="video-card" id="remote-video-card">
+          <video id="remote-video" autoplay playsinline></video>
+          <span class="video-label">Partner 💖</span>
+        </div>
+      </div>
+      
+      <div id="controls-wrapper">
+        <div class="call-controls">
+          <button class="call-btn" onclick="startCall()">Connect Call</button>
+        </div>
+      </div>
     </div>
   </div>
 

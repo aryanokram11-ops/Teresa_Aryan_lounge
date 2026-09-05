@@ -139,6 +139,9 @@ function selectGame(gameId) {
   } else if (gameId === 'guessing') {
     const guessGame = document.getElementById('guessing-game');
     if (guessGame) guessGame.classList.remove('hidden-section');
+  } else if (gameId === 'rps') {
+    const rpsGame = document.getElementById('rps-game');
+    if (rpsGame) rpsGame.classList.remove('hidden-section');
   }
 }
 
@@ -149,7 +152,7 @@ function backToGameList() {
   if (menu) menu.classList.remove('hidden-section');
 }
 
-// ================= YOUTUBE & HOST STATE =================
+// ================= RAVE-STYLE YOUTUBE WATCH PARTY SYNC =================
 const tag = document.createElement('script');
 tag.src = "https://www.youtube.com/iframe_api";
 const firstScriptTag = document.getElementsByTagName('script')[0];
@@ -158,7 +161,7 @@ if (firstScriptTag && firstScriptTag.parentNode) {
 }
 
 let player;
-let isSyncingFromRemote = false;
+let isRemoteAction = false;
 let currentHostId = null;
 
 function onYouTubeIframeAPIReady() {
@@ -173,19 +176,15 @@ function onYouTubeIframeAPIReady() {
       'enablejsapi': 1
     },
     events: {
-      'onReady': onPlayerReady,
+      'onReady': () => console.log("Rave Watch Party Player Ready 📺"),
       'onStateChange': onPlayerStateChange
     }
   });
 }
 
-function onPlayerReady(event) {
-  console.log("YouTube Player Ready.");
-}
-
 function onPlayerStateChange(event) {
-  if (isSyncingFromRemote) return;
-  if (currentHostId !== myClientId) return;
+  if (isRemoteAction) return;
+  if (currentHostId !== 'BOTH_HOSTS' && currentHostId !== myClientId) return;
   if (!player || typeof player.getCurrentTime !== 'function') return;
 
   const currentTime = player.getCurrentTime();
@@ -213,8 +212,8 @@ function extractVideoId(url) {
 }
 
 function loadPastedVideo() {
-  if (currentHostId !== myClientId) {
-    return alert("Only the current Host can load new videos! Win RPS to become host 👑");
+  if (currentHostId !== 'BOTH_HOSTS' && currentHostId !== myClientId) {
+    return alert("Only the current Host or Co-Host can load new videos! Type 'I love you' 3x in chat to unlock Co-Host 👑💖");
   }
   playSound('click');
   const videoInput = document.getElementById('video-url-input');
@@ -328,6 +327,8 @@ const winningConditions = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,
 let myDuelRole = localStorage.getItem('lounge_duel_role') || null;
 let duelData = { aryanSecret: null, teresaSecret: null, currentTurn: 'Aryan', feedback: 'Set secrets to begin!', winner: null, aryanHistory: [], teresaHistory: [], roles: {} };
 
+let loveYouCount = 0;
+
 function setupPresence() {
   if (myPresenceRef) myPresenceRef.remove();
   myPresenceRef = roomRef.child('presence').push();
@@ -359,7 +360,10 @@ function listenToRoom() {
       const nonHostShield = document.getElementById('non-host-shield');
 
       if (hostBadge && nonHostShield) {
-        if (currentHostId === myClientId) {
+        if (currentHostId === 'BOTH_HOSTS') {
+          hostBadge.innerText = "👑 Co-Host: Both of You! 💕";
+          nonHostShield.classList.add('hidden-section');
+        } else if (currentHostId === myClientId) {
           hostBadge.innerText = "👑 Host: You";
           nonHostShield.classList.add('hidden-section');
         } else if (currentHostId) {
@@ -386,14 +390,18 @@ function listenToRoom() {
         updateDuelUI();
       }
 
+      if (data.interactiveRps) {
+        checkInteractiveRpsOutcome(data.interactiveRps);
+      }
+
       if (data.watchParty && player && typeof player.loadVideoById === 'function') {
         const wp = data.watchParty;
         if (wp.updatedBy && wp.updatedBy !== myClientId) {
-          isSyncingFromRemote = true;
+          isRemoteAction = true;
 
           if (wp.action === 'LOAD' && wp.videoId) {
             player.loadVideoById(wp.videoId);
-          } else if (player.getCurrentTime) {
+          } else if (player.getCurrentTime && player.getPlayerState) {
             const localTime = player.getCurrentTime();
             const networkDelay = (Date.now() - (wp.timestamp || Date.now())) / 1000;
             const targetTime = (wp.time || 0) + (wp.action === 'PLAY' ? networkDelay : 0);
@@ -402,11 +410,14 @@ function listenToRoom() {
               player.seekTo(targetTime, true);
             }
 
-            if (wp.action === 'PLAY') player.playVideo();
-            else if (wp.action === 'PAUSE') player.pauseVideo();
+            if (wp.action === 'PLAY') {
+              player.playVideo();
+            } else if (wp.action === 'PAUSE') {
+              player.pauseVideo();
+            }
           }
 
-          setTimeout(() => { isSyncingFromRemote = false; }, 400);
+          setTimeout(() => { isRemoteAction = false; }, 500);
         }
       }
     } else {
@@ -500,10 +511,35 @@ function appendChatMessage(msg) {
     div.innerHTML = `<img src="${msg.mediaUrl}" alt="Shared image">`;
   } else {
     div.innerText = msg.text;
+    
+    if (msg.text && msg.text.toLowerCase().trim() === 'i love you') {
+      loveYouCount++;
+      if (loveYouCount >= 3) {
+        triggerDualHost();
+      }
+    }
   }
 
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
+}
+
+function triggerDualHost() {
+  roomRef.child('hostId').set('BOTH_HOSTS');
+  playSound('win');
+
+  const container = document.getElementById('chat-messages-container');
+  if (container) {
+    const notifyDiv = document.createElement('div');
+    notifyDiv.className = 'chat-msg';
+    notifyDiv.style.background = 'var(--primary-pink)';
+    notifyDiv.style.color = 'white';
+    notifyDiv.style.textAlign = 'center';
+    notifyDiv.style.fontWeight = 'bold';
+    notifyDiv.innerText = '💖 Secret Unlocked! Both of you are now Co-Hosts! 👑👑';
+    container.appendChild(notifyDiv);
+    container.scrollTop = container.scrollHeight;
+  }
 }
 
 // ================= GAME FUNCTIONS =================
@@ -688,7 +724,187 @@ function resetDuelGame() {
   roomRef.child('secretDuel').update({ aryanSecret: null, teresaSecret: null, currentTurn: 'Aryan', feedback: 'Reset!', winner: null, aryanHistory: [], teresaHistory: [] });
 }
 
-// ================= WEBRTC & FULLSCREEN CALL MANAGER =================
+// ================= INTERACTIVE PAWS & CLAWS RPS & DOG MEME RAIN =================
+const dogMemesList = ['🐶', '🐕', '🐩', '🐾', '🦴', '🤪', '🤩', '😎', '🐶✨', '🐾💖', '🌭', '🦊'];
+
+function triggerDogMemeRain() {
+  const container = document.getElementById('meme-rain-container');
+  if (!container) return;
+
+  for (let i = 0; i < 22; i++) {
+    const meme = document.createElement('div');
+    meme.className = 'floating-dog-meme';
+    meme.innerText = dogMemesList[Math.floor(Math.random() * dogMemesList.length)];
+    meme.style.left = Math.random() * 90 + 'vw';
+    meme.style.animationDuration = (2.5 + Math.random() * 2.5) + 's';
+    meme.style.animationDelay = (Math.random() * 0.8) + 's';
+    container.appendChild(meme);
+
+    setTimeout(() => {
+      meme.remove();
+    }, 5500);
+  }
+}
+
+function submitInteractiveRps(moveChoice) {
+  playSound('click');
+  const avatarMap = { 'Rock': '🐶✊', 'Paper': '🐕✋', 'Scissors': '🐩✌️' };
+  
+  const myAvatar = document.getElementById('my-rps-avatar');
+  const myChoiceText = document.getElementById('my-rps-choice-text');
+  const statusMsg = document.getElementById('rps-status-msg');
+
+  if (myAvatar) myAvatar.innerText = avatarMap[moveChoice];
+  if (myChoiceText) myChoiceText.innerText = `Chose ${moveChoice}!`;
+  if (statusMsg) statusMsg.innerText = "Locked in! Waiting for partner... ⏳🐾";
+
+  roomRef.child('interactiveRps/' + myClientId).set({
+    choice: moveChoice,
+    timestamp: firebase.database.ServerValue.TIMESTAMP
+  });
+}
+
+function checkInteractiveRpsOutcome(rpsData) {
+  const keys = Object.keys(rpsData);
+  const partnerKey = keys.find(k => k !== myClientId);
+
+  const partnerAvatar = document.getElementById('partner-rps-avatar');
+  const partnerChoiceText = document.getElementById('partner-rps-choice-text');
+
+  if (partnerKey && rpsData[partnerKey]) {
+    const partnerChoice = rpsData[partnerKey].choice;
+    const avatarMap = { 'Rock': '🐶✊', 'Paper': '🐕✋', 'Scissors': '🐩✌️' };
+    if (partnerAvatar) partnerAvatar.innerText = avatarMap[partnerChoice];
+    if (partnerChoiceText) partnerChoiceText.innerText = `Chose ${partnerChoice}!`;
+  } else {
+    if (partnerAvatar) partnerAvatar.innerText = '🐕❓';
+    if (partnerChoiceText) partnerChoiceText.innerText = 'Thinking...';
+  }
+
+  if (keys.length < 2) return;
+
+  const p1 = { id: keys[0], choice: rpsData[keys[0]].choice };
+  const p2 = { id: keys[1], choice: rpsData[keys[1]].choice };
+
+  const statusMsg = document.getElementById('rps-status-msg');
+  const outcomeBanner = document.getElementById('rps-outcome-banner');
+  const replayBtn = document.getElementById('rps-replay-btn');
+
+  if (p1.choice === p2.choice) {
+    if (statusMsg) statusMsg.innerText = "It's a Doggy Tie! 🤝";
+    if (outcomeBanner) {
+      outcomeBanner.classList.remove('hidden-section');
+      outcomeBanner.innerText = `Both chose ${p1.choice}! Play again! 🐾`;
+    }
+    playSound('wrong');
+    return;
+  }
+
+  let winnerId = null;
+  if (
+    (p1.choice === 'Rock' && p2.choice === 'Scissors') ||
+    (p1.choice === 'Paper' && p2.choice === 'Rock') ||
+    (p1.choice === 'Scissors' && p2.choice === 'Paper')
+  ) {
+    winnerId = p1.id;
+  } else {
+    winnerId = p2.id;
+  }
+
+  const isWinner = winnerId === myClientId;
+  if (statusMsg) statusMsg.innerText = "Battle Finished! 🎉";
+  if (outcomeBanner) {
+    outcomeBanner.classList.remove('hidden-section');
+    outcomeBanner.innerText = isWinner ? "🎉 You Won the Dog Battle! 🏆🐶" : "😢 Partner Won! Better luck next bark!";
+  }
+  if (replayBtn) replayBtn.classList.remove('hidden-section');
+
+  if (isWinner) {
+    playSound('win');
+    triggerDogMemeRain();
+  } else {
+    playSound('wrong');
+  }
+}
+
+function resetInteractiveRps() {
+  playSound('click');
+  roomRef.child('interactiveRps').remove();
+  
+  const myAvatar = document.getElementById('my-rps-avatar');
+  const partnerAvatar = document.getElementById('partner-rps-avatar');
+  const myChoiceText = document.getElementById('my-rps-choice-text');
+  const partnerChoiceText = document.getElementById('partner-rps-choice-text');
+  const statusMsg = document.getElementById('rps-status-msg');
+  const outcomeBanner = document.getElementById('rps-outcome-banner');
+  const replayBtn = document.getElementById('rps-replay-btn');
+
+  if (myAvatar) myAvatar.innerText = '🐶❓';
+  if (partnerAvatar) partnerAvatar.innerText = '🐕❓';
+  if (myChoiceText) myChoiceText.innerText = 'Not chosen';
+  if (partnerChoiceText) partnerChoiceText.innerText = 'Waiting...';
+  if (statusMsg) statusMsg.innerText = 'Choose your battle weapon! 🐶';
+  if (outcomeBanner) outcomeBanner.classList.add('hidden-section');
+  if (replayBtn) replayBtn.classList.add('hidden-section');
+}
+
+// ================= FLOATING CALL WIDGET CONTROLS =================
+let isCallMinimized = false;
+
+function toggleMinimizeCall() {
+  playSound('click');
+  isCallMinimized = !isCallMinimized;
+  const widget = document.getElementById('floating-call-widget');
+  const btn = document.getElementById('minimize-call-btn');
+  if (widget && btn) {
+    if (isCallMinimized) {
+      widget.classList.add('minimized');
+      btn.innerText = '🗖';
+    } else {
+      widget.classList.remove('minimized');
+      btn.innerText = '🗕';
+    }
+  }
+}
+
+let isDragging = false;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+
+function startDrag(e) {
+  if (e.target.tagName === 'BUTTON') return;
+  isDragging = true;
+  const widget = document.getElementById('floating-call-widget');
+  const rect = widget.getBoundingClientRect();
+  
+  dragOffsetX = e.clientX - rect.left;
+  dragOffsetY = e.clientY - rect.top;
+
+  document.addEventListener('mousemove', onDrag);
+  document.addEventListener('mouseup', stopDrag);
+}
+
+function onDrag(e) {
+  if (!isDragging) return;
+  const widget = document.getElementById('floating-call-widget');
+  
+  let newX = window.innerWidth - e.clientX - (widget.offsetWidth - dragOffsetX);
+  let newY = window.innerHeight - e.clientY - (widget.offsetHeight - dragOffsetY);
+
+  if (newX < 10) newX = 10;
+  if (newY < 10) newY = 10;
+
+  widget.style.right = newX + 'px';
+  widget.style.bottom = newY + 'px';
+}
+
+function stopDrag() {
+  isDragging = false;
+  document.removeEventListener('mousemove', onDrag);
+  document.removeEventListener('mouseup', stopDrag);
+}
+
+// ================= WEBRTC & GLOBAL CALL MANAGER =================
 let localStream = null;
 let remoteStream = null;
 let peerConnection = null;
@@ -853,5 +1069,5 @@ function disconnectCall() {
     `;
   }
 
-  console.log("Video and voice calls completely disconnected. Hardware streams released.");
+  console.log("Video and voice calls completely disconnected.");
 }
