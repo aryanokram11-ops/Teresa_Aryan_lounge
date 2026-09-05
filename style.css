@@ -292,7 +292,7 @@ main {
 .chat-widget {
   display: flex;
   flex-direction: column;
-  height: 380px; /* Locked height so it stays consistent */
+  height: 380px;
 }
 
 #chat-messages-container {
@@ -492,6 +492,11 @@ main {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+}
+
+/* Ensures closing works by overriding flex display when hidden-section is present */
+.modal-overlay.hidden-section {
+  display: none !important;
 }
 
 .modal-content {

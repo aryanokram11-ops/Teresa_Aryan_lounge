@@ -120,7 +120,7 @@ function backToGameList() {
   document.getElementById('game-selection-menu').classList.remove('hidden-section');
 }
 
-// ================= YOUTUBE & HOST STATE =================
+// ================= YOUTUBE & HOST STATE (NO DEFAULT VIDEO LOADED) =================
 const tag = document.createElement('script');
 tag.src = "https://www.youtube.com/iframe_api";
 const firstScriptTag = document.getElementsByTagName('script')[0];
@@ -134,7 +134,6 @@ function onYouTubeIframeAPIReady() {
   player = new YT.Player('youtube-player', {
     height: '100%',
     width: '100%',
-    videoId: 'jNQXAC9IVRw',
     playerVars: {
       'playsinline': 1,
       'controls': 1,
@@ -149,12 +148,13 @@ function onYouTubeIframeAPIReady() {
 }
 
 function onPlayerReady(event) {
-  console.log("YouTube Player Ready.");
+  console.log("YouTube Player Ready. Waiting for user to load a video.");
 }
 
 function onPlayerStateChange(event) {
   if (isSyncingFromRemote) return;
   if (currentHostId !== myClientId) return;
+  if (!player || typeof player.getCurrentTime !== 'function') return;
 
   const currentTime = player.getCurrentTime();
   if (event.data === YT.PlayerState.PLAYING) {
@@ -204,7 +204,7 @@ function loadPastedVideo() {
   }
 }
 
-// ================= ROCK PAPER SCISSORS HOST BATTLE =================
+// ================= ROCK PAPER SCISSORS HOST BATTLE & FIXED MODAL =================
 function openRpsModal() {
   playSound('click');
   document.getElementById('rps-modal').classList.remove('hidden-section');
@@ -353,7 +353,7 @@ function listenToRoom() {
 
           if (wp.action === 'LOAD' && wp.videoId) {
             player.loadVideoById(wp.videoId);
-          } else {
+          } else if (player.getCurrentTime) {
             const localTime = player.getCurrentTime();
             const networkDelay = (Date.now() - (wp.timestamp || Date.now())) / 1000;
             const targetTime = (wp.time || 0) + (wp.action === 'PLAY' ? networkDelay : 0);
@@ -392,6 +392,12 @@ function joinRoom(isAuto = false) {
   currentPartnerCode = inputCode;
   localStorage.setItem('lounge_partner_code', currentPartnerCode);
   roomRef = db.ref('rooms/' + currentPartnerCode);
+  
+  // RESET CHAT BOX ON ROOM SWITCH
+  const chatContainer = document.getElementById('chat-messages-container');
+  if (chatContainer) {
+    chatContainer.innerHTML = '';
+  }
   
   document.getElementById('room-input-row').classList.add('hidden-section');
   document.getElementById('room-connected-display').classList.remove('hidden-section');
