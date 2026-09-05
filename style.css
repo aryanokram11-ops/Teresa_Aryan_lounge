@@ -41,7 +41,6 @@ body {
   transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* Floating Hearts Background */
 #hearts-bg {
   position: fixed;
   top: 0;
@@ -202,7 +201,6 @@ main {
   display: none !important;
 }
 
-/* ================= WATCH PARTY LAYOUT ================= */
 #watch-party-hub {
   display: flex;
   flex-direction: column;
@@ -303,7 +301,6 @@ main {
   padding-bottom: 4px;
 }
 
-/* Video Calls Sidebar */
 .video-grids {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -326,6 +323,19 @@ main {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+}
+
+/* Fullscreen support for both host and non-host devices */
+.video-card:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+}
+.video-card:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
 }
 
 .video-label {
@@ -337,6 +347,7 @@ main {
   font-size: 0.7rem;
   padding: 2px 5px;
   border-radius: 4px;
+  z-index: 5;
 }
 
 .call-controls {
@@ -345,12 +356,11 @@ main {
   justify-content: center;
 }
 
-.call-controls button {
-  padding: 6px 10px;
+.call-controls button, #controls-wrapper button {
+  padding: 6px 12px;
   font-size: 0.75rem;
 }
 
-/* ================= CHAT STYLING ================= */
 .chat-widget {
   display: flex;
   flex-direction: column;
@@ -426,7 +436,6 @@ main {
   flex-shrink: 0;
 }
 
-/* ================= GAMES HUB & SCREENS ================= */
 #games-hub {
   background: var(--card-bg);
   border-radius: var(--border-radius);
@@ -539,7 +548,6 @@ main {
   font-size: 0.8rem;
 }
 
-/* ================= RPS MODAL ================= */
 .modal-overlay {
   position: fixed !important;
   top: 0 !important;
@@ -614,38 +622,14 @@ main {
   background: #2f3542;
 }
 
-/* ================= RESPONSIVE PHONE OPTIMIZATIONS ================= */
 @media (max-width: 600px) {
-  header h1 {
-    font-size: 1.4rem;
-  }
-  header p {
-    font-size: 0.75rem;
-  }
-  #room-controls-bar {
-    width: 100%;
-    border-radius: 20px;
-    padding: 8px 12px;
-  }
-  #room-input {
-    width: 130px;
-  }
-  nav .nav-btn {
-    padding: 6px 14px;
-    font-size: 0.8rem;
-  }
-  .watchparty-header-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .video-input-box {
-    max-width: 100%;
-  }
-  .board {
-    grid-template-columns: repeat(3, 70px);
-    grid-template-rows: repeat(3, 70px);
-  }
-  .cell {
-    font-size: 1.7rem;
-  }
+  header h1 { font-size: 1.4rem; }
+  header p { font-size: 0.75rem; }
+  #room-controls-bar { width: 100%; border-radius: 20px; padding: 8px 12px; }
+  #room-input { width: 130px; }
+  nav .nav-btn { padding: 6px 14px; font-size: 0.8rem; }
+  .watchparty-header-bar { flex-direction: column; align-items: stretch; }
+  .video-input-box { max-width: 100%; }
+  .board { grid-template-columns: repeat(3, 70px); grid-template-rows: repeat(3, 70px); }
+  .cell { font-size: 1.7rem; }
 }

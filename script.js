@@ -624,10 +624,10 @@ function resetDuelGame() {
   roomRef.child('secretDuel').update({ aryanSecret: null, teresaSecret: null, currentTurn: 'Aryan', feedback: 'Reset!', winner: null, aryanHistory: [], teresaHistory: [] });
 }
 
-// ================= WEBRTC VIDEO CALLS =================
-let localStream;
-let remoteStream;
-let peerConnection;
+// ================= WEBRTC & FULLSCREEN CALL MANAGER =================
+let localStream = null;
+let remoteStream = null;
+let peerConnection = null;
 let isInitiator = false;
 
 const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
@@ -635,8 +635,14 @@ const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 async function startCall() {
   playSound('click');
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    document.getElementById('wp-local-video').srcObject = localStream;
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const constraints = {
+      audio: { echoCancellation: true, noiseSuppression: true },
+      video: isMobile ? { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } : { width: { ideal: 1280 }, height: { ideal: 720 } }
+    };
+
+    localStream = await navigator.mediaDevices.getUserMedia(constraints);
+    document.getElementById('local-video').srcObject = localStream;
 
     createPeerConnection();
 
@@ -673,6 +679,10 @@ async function startCall() {
         peerConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.error(e));
       }
     });
+
+    // Transform control panel to show Mute, Cam toggle, Fullscreen, and Disconnect buttons
+    renderActiveCallControls();
+
   } catch (err) {
     alert("Camera/Microphone access error! Check permissions 🥺");
   }
@@ -683,7 +693,7 @@ function createPeerConnection() {
   localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
   remoteStream = new MediaStream();
-  document.getElementById('wp-remote-video').srcObject = remoteStream;
+  document.getElementById('remote-video').srcObject = remoteStream;
 
   peerConnection.ontrack = (event) => {
     event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
@@ -692,6 +702,18 @@ function createPeerConnection() {
   peerConnection.onicecandidate = (event) => {
     if (event.candidate) roomRef.child('signals/candidates').push(JSON.stringify(event.candidate));
   };
+}
+
+function renderActiveCallControls() {
+  const wrapper = document.getElementById('controls-wrapper');
+  wrapper.innerHTML = `
+    <div class="call-controls">
+      <button class="audio-btn" onclick="toggleAudio()">🎤 Mute</button>
+      <button class="video-btn" onclick="toggleVideo()">📹 Cam Off</button>
+      <button class="fs-btn" onclick="toggleRemoteFullscreen()">⛶ Fullscreen</button>
+      <button class="disconnect-btn" style="background:#ff4757;" onclick="disconnectCall()">🛑 Disconnect</button>
+    </div>
+  `;
 }
 
 function toggleAudio() {
@@ -706,4 +728,63 @@ function toggleVideo() {
   const track = localStream.getVideoTracks()[0];
   track.enabled = !track.enabled;
   document.querySelector('.video-btn').innerText = track.enabled ? "📹 Cam Off" : "📷 Cam On";
+}
+
+function toggleRemoteFullscreen() {
+  const container = document.getElementById('remote-video-card');
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    if (container.requestFullscreen) container.requestFullscreen();
+    else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen();
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+  }
+}
+
+// Completely disconnects video & voice channels and cuts hardware streams
+function disconnectCall() {
+  playSound('click');
+
+  // 1. Stop all local microphone and video tracks (turns off hardware camera/mic indicators)
+  if (localStream) {
+    localStream.getTracks().forEach(track => track.stop());
+    localStream = null;
+  }
+
+  // 2. Stop remote incoming tracks
+  if (remoteStream) {
+    remoteStream.getTracks().forEach(track => track.stop());
+    remoteStream = null;
+  }
+
+  // 3. Close WebRTC Peer connection
+  if (peerConnection) {
+    peerConnection.onicecandidate = null;
+    peerConnection.ontrack = null;
+    peerConnection.close();
+    peerConnection = null;
+  }
+
+  // 4. Clear video elements sources
+  const localVideo = document.getElementById('local-video');
+  const remoteVideo = document.getElementById('remote-video');
+  if (localVideo) localVideo.srcObject = null;
+  if (remoteVideo) remoteVideo.srcObject = null;
+
+  // 5. Clean up signaling node data
+  if (roomRef) {
+    roomRef.child('signals/caller').remove();
+    roomRef.child('signals/offer').remove();
+    roomRef.child('signals/answer').remove();
+    roomRef.child('signals/candidates').remove();
+  }
+
+  // 6. Reset control panel back to initial connect state
+  document.getElementById('controls-wrapper').innerHTML = `
+    <div class="call-controls">
+      <button class="call-btn" onclick="startCall()">Connect Call</button>
+    </div>
+  `;
+
+  console.log("Video and voice calls completely disconnected. Hardware streams released.");
 }

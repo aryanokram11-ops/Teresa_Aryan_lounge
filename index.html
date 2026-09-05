@@ -58,7 +58,7 @@
       <div class="watchparty-workspace">
         <div class="video-player-main-container">
           <div id="youtube-player"></div>
-          <div id="non-host-shield" class="hidden-section" title="Only Host controls playback! Fullscreen allowed below."></div>
+          <div id="non-host-shield" class="hidden-section" title="Only Host controls playback!"></div>
         </div>
 
         <div class="watchparty-sidebar">
@@ -66,18 +66,20 @@
             <h3>📹 Live Video & Voice Call</h3>
             <div class="video-grids">
               <div class="video-card">
-                <video id="wp-local-video" autoplay playsinline muted></video>
+                <video id="local-video" autoplay playsinline muted></video>
                 <span class="video-label">You 🐶</span>
               </div>
-              <div class="video-card">
-                <video id="wp-remote-video" autoplay playsinline></video>
+              <div class="video-card" id="remote-video-card">
+                <video id="remote-video" autoplay playsinline></video>
                 <span class="video-label">Partner 💖</span>
               </div>
             </div>
-            <div class="call-controls">
-              <button class="call-btn" onclick="startCall()">Connect</button>
-              <button class="audio-btn" onclick="toggleAudio()">🎤 Mute</button>
-              <button class="video-btn" onclick="toggleVideo()">📹 Cam Off</button>
+            
+            <!-- Dynamic Controls Wrapper for Call / Disconnect -->
+            <div id="controls-wrapper">
+              <div class="call-controls">
+                <button class="call-btn" onclick="startCall()">Connect Call</button>
+              </div>
             </div>
           </div>
 
@@ -141,24 +143,20 @@
       <div id="guessing-game" class="game-screen hidden-section">
         <button class="back-link" onclick="backToGameList()">← Back to Games</button>
         <h2>Secret Number Duel 🦴</h2>
-        
         <div id="duel-select-box" class="role-select-box">
           <p>Choose your identity:</p>
-          <button id="aryan-btn" onclick="setDuelPlayer('Aryan')">Aryan 💙</button>
-          <button id="teresa-btn" onclick="setDuelPlayer('Teresa')">Teresa 💖</button>
+          <button onclick="setDuelPlayer('Aryan')">Aryan 💙</button>
+          <button onclick="setDuelPlayer('Teresa')">Teresa 💖</button>
         </div>
-        
         <div id="duel-locked-box" class="hidden-section">
           <div id="duel-identity"></div>
           <button onclick="resetRoleSelection('duel')">Switch Identity 🔄</button>
         </div>
-
         <div id="set-number-box">
           <p id="secret-status">Hide your secret bone number (1 - 100):</p>
           <input type="number" id="secret-input" min="1" max="100" placeholder="Secret number">
           <button onclick="lockSecretNumber()">Lock Secret 🔒</button>
         </div>
-
         <div id="guess-duel-box" class="hidden-section">
           <h3 id="turn-indicator">Turn Indicator</h3>
           <div class="guess-row">
@@ -166,13 +164,11 @@
             <button onclick="submitDuelGuess()">Sniff & Guess 🐾</button>
           </div>
           <p id="guess-feedback">No guesses made yet.</p>
-          
           <div id="secret-reveal-box" class="hidden-section">
             <h4>Revealed Secret Bones: 🦴</h4>
             <p>Aryan's Secret: <span id="reveal-aryan">?</span> | Teresa's Secret: <span id="reveal-teresa">?</span></p>
             <button onclick="resetDuelGame()">Play Again 💖</button>
           </div>
-
           <div class="history-container">
             <div class="history-box">
               <h4>Aryan's Sniffs 💙</h4>
@@ -193,16 +189,12 @@
     <div class="modal-content">
       <h2>⚔️ Rock Paper Scissors Battle</h2>
       <p>Winner takes the <strong>Host Crown</strong> and controls playback!</p>
-      
       <div id="rps-choices" class="rps-buttons-row">
         <button onclick="playRps('Rock')">✊ Rock</button>
         <button onclick="playRps('Paper')">✋ Paper</button>
         <button onclick="playRps('Scissors')">✌️ Scissors</button>
       </div>
-
-      <div id="rps-result-display" class="rps-result-box">
-        Make your choice to settle who hosts!
-      </div>
+      <div id="rps-result-display" class="rps-result-box">Make your choice to settle who hosts!</div>
       <button class="close-modal-btn" onclick="closeRpsModal()">Close ❌</button>
     </div>
   </div>
