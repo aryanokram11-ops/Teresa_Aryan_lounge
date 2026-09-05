@@ -66,6 +66,7 @@ function setRole(role) {
 function setDuelPlayer(role) {
   myDuelRole = role;
   document.getElementById('duel-identity').innerText = `You are playing as: ${role}`;
+  updateDuelUI();
 }
 
 function listenToRoom() {
@@ -215,7 +216,13 @@ function updateDuelUI() {
   } else {
     document.getElementById('set-number-box').classList.remove('hidden-section');
     document.getElementById('guess-duel-box').classList.add('hidden-section');
-    document.getElementById('secret-status').innerText = `Aryan Ready: ${aryanReady ? '✅' : '❌'} | Teresa Ready: ${teresaReady ? '✅' : '❌'}`;
+
+    const myLocked = (myDuelRole === 'Aryan' && aryanReady) || (myDuelRole === 'Teresa' && teresaReady);
+    if (myLocked) {
+      document.getElementById('secret-status').innerText = "Status: Secret number locked! Waiting for partner...";
+    } else {
+      document.getElementById('secret-status').innerText = `Aryan Ready: ${aryanReady ? '✅' : '❌'} | Teresa Ready: ${teresaReady ? '✅' : '❌'}`;
+    }
   }
 
   document.getElementById('guess-feedback').innerText = duelData.feedback || 'No guesses made yet.';
