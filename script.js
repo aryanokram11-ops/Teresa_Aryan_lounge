@@ -91,11 +91,12 @@ if (typeof firebase !== 'undefined' && !firebase.apps.length) {
 }
 
 const db = firebase.database();
-let currentRoomCode = "love-lounge";
-let roomRef = db.ref('rooms/' + currentRoomCode);
+let currentPartnerCode = "love-lounge";
+let roomRef = db.ref('rooms/' + currentPartnerCode);
+let myPresenceRef = null;
 
 // Tic-Tac-Toe State
-let myRole = 'X';
+let myRole = localStorage.getItem('lounge_ttt_role') || null;
 let boardState = ['', '', '', '', '', '', '', '', ''];
 let currentPlayer = 'X';
 let gameActive = true;
@@ -107,7 +108,7 @@ const winningConditions = [
 ];
 
 // Secret Number Duel State
-let myDuelRole = 'Aryan';
+let myDuelRole = localStorage.getItem('lounge_duel_role') || null;
 let duelData = {
   aryanSecret: null,
   teresaSecret: null,
@@ -118,17 +119,67 @@ let duelData = {
   teresaHistory: []
 };
 
+// Initialize role UI states on load
+window.addEventListener('DOMContentLoaded', () => {
+  if (myRole) {
+    document.getElementById('ttt-select-box').classList.add('hidden-section');
+    document.getElementById('ttt-locked-box').classList.remove('hidden-section');
+    document.getElementById('role-display').innerText = `You are playing as: ${myRole}`;
+  }
+
+  if (myDuelRole) {
+    document.getElementById('duel-select-box').classList.add('hidden-section');
+    document.getElementById('duel-locked-box').classList.remove('hidden-section');
+    document.getElementById('duel-identity').innerText = `You are playing as: ${myDuelRole}`;
+    updateDuelUI();
+  }
+
+  joinRoom();
+});
+
 function setRole(role) {
   playSound('click');
   myRole = role;
+  localStorage.setItem('lounge_ttt_role', role);
+  
+  document.getElementById('ttt-select-box').classList.add('hidden-section');
+  document.getElementById('ttt-locked-box').classList.remove('hidden-section');
   document.getElementById('role-display').innerText = `You are playing as: ${myRole}`;
 }
 
 function setDuelPlayer(role) {
   playSound('click');
   myDuelRole = role;
+  localStorage.setItem('lounge_duel_role', role);
+
+  document.getElementById('duel-select-box').classList.add('hidden-section');
+  document.getElementById('duel-locked-box').classList.remove('hidden-section');
   document.getElementById('duel-identity').innerText = `You are playing as: ${role}`;
   updateDuelUI();
+}
+
+function resetRoleSelection(gameType) {
+  playSound('click');
+  if (gameType === 'ttt') {
+    localStorage.removeItem('lounge_ttt_role');
+    myRole = null;
+    document.getElementById('ttt-select-box').classList.remove('hidden-section');
+    document.getElementById('ttt-locked-box').classList.add('hidden-section');
+  } else if (gameType === 'duel') {
+    localStorage.removeItem('lounge_duel_role');
+    myDuelRole = null;
+    document.getElementById('duel-select-box').classList.remove('hidden-section');
+    document.getElementById('duel-locked-box').classList.add('hidden-section');
+  }
+}
+
+function setupPresence() {
+  if (myPresenceRef) {
+    myPresenceRef.remove();
+  }
+  myPresenceRef = roomRef.child('presence').push();
+  myPresenceRef.onDisconnect().remove();
+  myPresenceRef.set({ online: true, timestamp: firebase.database.ServerValue.TIMESTAMP });
 }
 
 function listenToRoom() {
@@ -136,6 +187,19 @@ function listenToRoom() {
   roomRef.on('value', (snapshot) => {
     const data = snapshot.val();
     if (data) {
+      // Check presence for partner status
+      const presenceObj = data.presence || {};
+      const activeCount = Object.keys(presenceObj).length;
+      const statusEl = document.getElementById('room-status');
+
+      if (activeCount >= 2) {
+        statusEl.innerText = `Connected to partner code: ${currentPartnerCode} — Partner Connected ❤️`;
+        statusEl.style.color = "#2ed573";
+      } else {
+        statusEl.innerText = `Connected to partner code: ${currentPartnerCode} — Waiting for partner to join... ⏳`;
+        statusEl.style.color = "#ff6b81";
+      }
+
       if (data.ticTacToe) {
         boardState = data.ticTacToe.boardState || ['', '', '', '', '', '', '', '', ''];
         currentPlayer = data.ticTacToe.currentPlayer || 'X';
@@ -148,6 +212,9 @@ function listenToRoom() {
         duelData = data.secretDuel;
         updateDuelUI();
       }
+    } else {
+      document.getElementById('room-status').innerText = `Connected to partner code: ${currentPartnerCode} — Waiting for partner to join... ⏳`;
+      document.getElementById('room-status').style.color = "#ff6b81";
     }
   });
 }
@@ -155,17 +222,18 @@ function listenToRoom() {
 function joinRoom() {
   playSound('click');
   const inputCode = document.getElementById('room-input').value.trim();
-  if (!inputCode) return alert("Please enter a room code!");
+  if (!inputCode) return alert("Please enter a partner code!");
   
-  currentRoomCode = inputCode;
-  roomRef = db.ref('rooms/' + currentRoomCode);
+  currentPartnerCode = inputCode;
+  roomRef = db.ref('rooms/' + currentPartnerCode);
   
-  document.getElementById('room-status').innerText = `Connected to room: ${currentRoomCode}`;
+  setupPresence();
   listenToRoom();
 }
 
 // Tic-Tac-Toe Functions
 function makeMove(index) {
+  if (!myRole) return alert("Please select whether you are Player X or O first!");
   if (boardState[index] !== '' || !gameActive) return;
   if (currentPlayer !== myRole) return alert(`It's Player ${currentPlayer}'s turn! You are Player ${myRole}.`);
 
@@ -243,6 +311,7 @@ const highRoasts = [
 
 // Secret Number Duel Functions
 function lockSecretNumber() {
+  if (!myDuelRole) return alert("Please select whether you are Aryan or Teresa first!");
   const val = parseInt(document.getElementById('secret-input').value);
   if (isNaN(val) || val < 1 || val > 100) return alert("Enter a valid number between 1 and 100!");
 
@@ -258,6 +327,7 @@ function lockSecretNumber() {
 }
 
 function submitDuelGuess() {
+  if (!myDuelRole) return alert("Please select your identity first!");
   const turn = duelData.currentTurn || 'Aryan';
 
   if (duelData.winner) return alert("The game is over! Reset to play again.");
@@ -368,5 +438,3 @@ function resetDuelGame() {
   });
   document.getElementById('secret-input').value = '';
 }
-
-listenToRoom();

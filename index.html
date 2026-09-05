@@ -29,14 +29,14 @@
 
     <!-- Mini Games Main Hub -->
     <section id="games-hub" class="hidden-section">
-      <!-- Shared Room Setup -->
+      <!-- Shared Partner Code Setup -->
       <div class="multiplayer-box">
         <div class="room-row">
-          <label for="room-input"><b>Room Code:</b></label>
-          <input type="text" id="room-input" value="love-lounge" placeholder="Enter room code">
-          <button type="button" onclick="joinRoom()">Join Room</button>
+          <label for="room-input"><b>Partner Code:</b></label>
+          <input type="text" id="room-input" value="love-lounge" placeholder="Enter partner code">
+          <button type="button" onclick="joinRoom()">Connect</button>
         </div>
-        <p id="room-status">Connected to room: love-lounge</p>
+        <p id="room-status" style="font-weight: bold; color: #ff6b81; margin-top: 8px;">Connecting to lounge...</p>
       </div>
 
       <!-- Games Selection List -->
@@ -61,12 +61,18 @@
         <button type="button" class="back-btn" onclick="backToGameList()">← Back to Games Menu</button>
         <h2>Real-Time Tic-Tac-Toe</h2>
         
-        <div class="role-row">
-          <span>Pick your symbol: </span>
-          <button type="button" onclick="setRole('X')">Play as X</button>
-          <button type="button" onclick="setRole('O')">Play as O</button>
+        <!-- Role Selection / Locked Display -->
+        <div id="ttt-role-container" class="role-row">
+          <div id="ttt-select-box">
+            <span>Pick your symbol: </span>
+            <button type="button" onclick="setRole('X')">Play as X</button>
+            <button type="button" onclick="setRole('O')">Play as O</button>
+          </div>
+          <div id="ttt-locked-box" class="hidden-section" style="display: inline-flex; align-items: center; justify-content: center; gap: 10px;">
+            <span id="role-display" style="font-weight: bold; color: var(--primary);">You are playing as: X</span>
+            <button type="button" onclick="resetRoleSelection('ttt')" style="padding: 4px 10px; font-size: 0.85rem; background: #a4b0be;">Change / Reset</button>
+          </div>
         </div>
-        <p id="role-display">You are playing as: X</p>
 
         <div id="status">Player X's Turn</div>
         <div class="board" id="board">
@@ -88,12 +94,18 @@
         <button type="button" class="back-btn" onclick="backToGameList()">← Back to Games Menu</button>
         <h2>Secret Number Duel</h2>
 
-        <div class="role-row">
-          <span>Who are you? </span>
-          <button type="button" onclick="setDuelPlayer('Aryan')">Aryan</button>
-          <button type="button" onclick="setDuelPlayer('Teresa')">Teresa</button>
+        <!-- Identity Selection / Locked Display -->
+        <div id="duel-role-container" class="role-row">
+          <div id="duel-select-box">
+            <span>Who are you? </span>
+            <button type="button" onclick="setDuelPlayer('Aryan')">Aryan</button>
+            <button type="button" onclick="setDuelPlayer('Teresa')">Teresa</button>
+          </div>
+          <div id="duel-locked-box" class="hidden-section" style="display: inline-flex; align-items: center; justify-content: center; gap: 10px;">
+            <span id="duel-identity" style="font-weight: bold; color: var(--primary);">You are playing as: Aryan</span>
+            <button type="button" onclick="resetRoleSelection('duel')" style="padding: 4px 10px; font-size: 0.85rem; background: #a4b0be;">Change / Reset</button>
+          </div>
         </div>
-        <p id="duel-identity">You are playing as: Aryan</p>
 
         <!-- Phase 1: Set Numbers -->
         <div id="set-number-box" class="duel-box">
