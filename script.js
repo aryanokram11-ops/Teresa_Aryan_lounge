@@ -542,6 +542,187 @@ function triggerDualHost() {
   }
 }
 
+// ================= NEW FEATURE 1: THE MEMORY ALBUM =================
+function openMemoryAlbum() {
+  playSound('click');
+  const modal = document.getElementById('memory-album-modal');
+  if (modal) modal.classList.remove('hidden-section');
+  loadMemoryAlbum();
+}
+
+function closeMemoryAlbum() {
+  playSound('click');
+  const modal = document.getElementById('memory-album-modal');
+  if (modal) modal.classList.add('hidden-section');
+}
+
+function loadMemoryAlbum() {
+  roomRef.child('memoryAlbum').on('value', (snapshot) => {
+    const memories = snapshot.val();
+    const container = document.getElementById('memory-grid-container');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!memories) {
+      container.innerHTML = '<p style="text-align:center; color:var(--text-muted); grid-column: 1/-1;">No memories added yet! Upload your first puppy memory 🐾</p>';
+      return;
+    }
+    Object.keys(memories).forEach(key => {
+      const mem = memories[key];
+      const card = document.createElement('div');
+      card.className = 'memory-card';
+      card.innerHTML = `
+        <img src="${mem.imageUrl}" alt="Memory Photo" style="width:100%; border-radius:12px; object-fit:cover; height:180px;">
+        <div class="memory-info" style="padding:10px 0;">
+          <h4 style="margin:0 0 5px 0;">${mem.title || 'Our Memory'}</h4>
+          <p style="margin:0 0 5px 0; font-size:0.9rem; color:var(--text-muted);">${mem.caption || ''}</p>
+          <small style="font-size:0.75rem; opacity:0.7;">${new Date(mem.timestamp).toLocaleDateString()}</small>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  });
+}
+
+function uploadMemory() {
+  const fileInput = document.getElementById('memory-file-input');
+  const titleInput = document.getElementById('memory-title-input');
+  const captionInput = document.getElementById('memory-caption-input');
+  
+  if (!fileInput || !fileInput.files[0]) return alert("Please select an image file! 📸");
+  const file = fileInput.files[0];
+  const reader = new FileReader();
+  
+  reader.onload = function(e) {
+    roomRef.child('memoryAlbum').push({
+      imageUrl: e.target.result,
+      title: titleInput ? titleInput.value.trim() : 'Our Memory',
+      caption: captionInput ? captionInput.value.trim() : '',
+      timestamp: firebase.database.ServerValue.TIMESTAMP,
+      sender: myClientId
+    });
+    if (titleInput) titleInput.value = '';
+    if (captionInput) captionInput.value = '';
+    fileInput.value = '';
+    playSound('win');
+  };
+  reader.readAsDataURL(file);
+}
+
+// ================= NEW FEATURE 2: INSTAGRAM-STYLE CHAT DRAWING =================
+let isDrawing = false;
+let drawingCanvas = null;
+let drawingCtx = null;
+let brushColor = '#ff4757';
+let brushSize = 4;
+
+function openDrawingModal() {
+  playSound('click');
+  const modal = document.getElementById('chat-drawing-modal');
+  if (modal) modal.classList.remove('hidden-section');
+  initDrawingCanvas();
+}
+
+function closeDrawingModal() {
+  playSound('click');
+  const modal = document.getElementById('chat-drawing-modal');
+  if (modal) modal.classList.add('hidden-section');
+}
+
+function initDrawingCanvas() {
+  drawingCanvas = document.getElementById('chat-sketch-canvas');
+  if (!drawingCanvas) return;
+  drawingCtx = drawingCanvas.getContext('2d');
+  
+  drawingCanvas.width = 320;
+  drawingCanvas.height = 320;
+  
+  drawingCtx.lineCap = 'round';
+  drawingCtx.lineJoin = 'round';
+  drawingCtx.strokeStyle = brushColor;
+  drawingCtx.lineWidth = brushSize;
+
+  drawingCtx.fillStyle = '#ffffff';
+  drawingCtx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+
+  drawingCanvas.onmousedown = startDrawingMouse;
+  drawingCanvas.onmousemove = drawMouse;
+  drawingCanvas.onmouseup = stopDrawingMouse;
+  drawingCanvas.onmouseleave = stopDrawingMouse;
+
+  drawingCanvas.ontouchstart = startDrawingTouch;
+  drawingCanvas.ontouchmove = drawTouch;
+  drawingCanvas.ontouchend = stopDrawingTouch;
+}
+
+function setBrushColor(color) {
+  playSound('click');
+  brushColor = color;
+  if (drawingCtx) drawingCtx.strokeStyle = brushColor;
+}
+
+function clearSketchCanvas() {
+  playSound('click');
+  if (drawingCtx && drawingCanvas) {
+    drawingCtx.fillStyle = '#ffffff';
+    drawingCtx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+  }
+}
+
+function startDrawingMouse(e) {
+  isDrawing = true;
+  const rect = drawingCanvas.getBoundingClientRect();
+  drawingCtx.beginPath();
+  drawingCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+}
+
+function drawMouse(e) {
+  if (!isDrawing) return;
+  const rect = drawingCanvas.getBoundingClientRect();
+  drawingCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+  drawingCtx.stroke();
+}
+
+function stopDrawingMouse() {
+  isDrawing = false;
+}
+
+function startDrawingTouch(e) {
+  e.preventDefault();
+  isDrawing = true;
+  const rect = drawingCanvas.getBoundingClientRect();
+  const touch = e.touches[0];
+  drawingCtx.beginPath();
+  drawingCtx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
+}
+
+function drawTouch(e) {
+  e.preventDefault();
+  if (!isDrawing) return;
+  const rect = drawingCanvas.getBoundingClientRect();
+  const touch = e.touches[0];
+  drawingCtx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
+  drawingCtx.stroke();
+}
+
+function stopDrawingTouch() {
+  isDrawing = false;
+}
+
+function sendDrawingToChat() {
+  if (!drawingCanvas) return;
+  const dataUrl = drawingCanvas.toDataURL('image/png');
+  
+  roomRef.child('chatMessages').push({
+    sender: myClientId,
+    mediaUrl: dataUrl,
+    type: 'media',
+    timestamp: firebase.database.ServerValue.TIMESTAMP
+  });
+
+  closeDrawingModal();
+  playSound('win');
+}
+
 // ================= GAME FUNCTIONS =================
 function setRole(role) {
   playSound('click');
@@ -724,28 +905,7 @@ function resetDuelGame() {
   roomRef.child('secretDuel').update({ aryanSecret: null, teresaSecret: null, currentTurn: 'Aryan', feedback: 'Reset!', winner: null, aryanHistory: [], teresaHistory: [] });
 }
 
-// ================= INTERACTIVE PAWS & CLAWS RPS & DOG MEME RAIN =================
-const dogMemesList = ['🐶', '🐕', '🐩', '🐾', '🦴', '🤪', '🤩', '😎', '🐶✨', '🐾💖', '🌭', '🦊'];
-
-function triggerDogMemeRain() {
-  const container = document.getElementById('meme-rain-container');
-  if (!container) return;
-
-  for (let i = 0; i < 22; i++) {
-    const meme = document.createElement('div');
-    meme.className = 'floating-dog-meme';
-    meme.innerText = dogMemesList[Math.floor(Math.random() * dogMemesList.length)];
-    meme.style.left = Math.random() * 90 + 'vw';
-    meme.style.animationDuration = (2.5 + Math.random() * 2.5) + 's';
-    meme.style.animationDelay = (Math.random() * 0.8) + 's';
-    container.appendChild(meme);
-
-    setTimeout(() => {
-      meme.remove();
-    }, 5500);
-  }
-}
-
+// ================= INTERACTIVE PAWS & CLAWS RPS =================
 function submitInteractiveRps(moveChoice) {
   playSound('click');
   const avatarMap = { 'Rock': '🐶✊', 'Paper': '🐕✋', 'Scissors': '🐩✌️' };
@@ -821,7 +981,6 @@ function checkInteractiveRpsOutcome(rpsData) {
 
   if (isWinner) {
     playSound('win');
-    triggerDogMemeRain();
   } else {
     playSound('wrong');
   }
