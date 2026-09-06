@@ -713,7 +713,6 @@ function showHugOverlay(message) {
   if (text) text.innerText = message;
   overlay.classList.remove('hidden-section');
   playSound('win');
-  triggerDogMemeRain();
   setTimeout(() => overlay.classList.add('hidden-section'), 2200);
 }
 
@@ -1048,28 +1047,7 @@ function resetDuelGame() {
   roomRef.child('secretDuel').update({ aryanSecret: null, teresaSecret: null, currentTurn: 'Aryan', feedback: 'Reset!', winner: null, aryanHistory: [], teresaHistory: [] });
 }
 
-// ================= INTERACTIVE PAWS & CLAWD RPS & DOG MEME RAIN[cite: 8] =================
-const dogMemesList = ['🐶', '🐕', '🐩', '🐾', '🦴', '🤪', '🤩', '😎', '🐶✨', '🐾💖', '🌭', '🦊'];
-
-function triggerDogMemeRain() {
-  const container = document.getElementById('meme-rain-container');
-  if (!container) return;
-
-  for (let i = 0; i < 22; i++) {
-    const meme = document.createElement('div');
-    meme.className = 'floating-dog-meme';
-    meme.innerText = dogMemesList[Math.floor(Math.random() * dogMemesList.length)];
-    meme.style.left = Math.random() * 90 + 'vw';
-    meme.style.animationDuration = (2.5 + Math.random() * 2.5) + 's';
-    meme.style.animationDelay = (Math.random() * 0.8) + 's';
-    container.appendChild(meme);
-
-    setTimeout(() => {
-      meme.remove();
-    }, 5500);
-  }
-}
-
+// ================= INTERACTIVE PAWS & CLAWS RPS[cite: 8] =================
 function submitInteractiveRps(moveChoice) {
   playSound('click');
   const avatarMap = { 'Rock': '🐶✊', 'Paper': '🐕✋', 'Scissors': '🐩✌️' };
@@ -1145,7 +1123,6 @@ function checkInteractiveRpsOutcome(rpsData) {
 
   if (isWinner) {
     playSound('win');
-    triggerDogMemeRain();
   } else {
     playSound('wrong');
   }
@@ -1223,10 +1200,10 @@ async function startCall() {
     });
 
     roomRef.child('signals/candidates').on('child_added', (snap) => {
-      const candidate = JSON.parse(snap.val());
-      if (snap.key !== myClientId && peerConnection) {
-        peerConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.error(e));
-      }
+      const entry = snap.val();
+      if (!entry || entry.sender === myClientId || !peerConnection) return;
+      const candidate = JSON.parse(entry.candidate);
+      peerConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.error(e));
     });
 
     renderActiveCallControls();
@@ -1249,7 +1226,12 @@ function createPeerConnection() {
   };
 
   peerConnection.onicecandidate = (event) => {
-    if (event.candidate) roomRef.child('signals/candidates').push(JSON.stringify(event.candidate));
+    if (event.candidate) {
+      roomRef.child('signals/candidates').push({
+        sender: myClientId,
+        candidate: JSON.stringify(event.candidate)
+      });
+    }
   };
 }
 
@@ -1322,6 +1304,8 @@ function disconnectCall() {
   if (remoteVideo) remoteVideo.srcObject = null;
 
   if (roomRef) {
+    roomRef.child('signals/answer').off();
+    roomRef.child('signals/candidates').off();
     roomRef.child('signals/caller').remove();
     roomRef.child('signals/offer').remove();
     roomRef.child('signals/answer').remove();
