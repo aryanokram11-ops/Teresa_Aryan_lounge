@@ -89,6 +89,7 @@ function initAudio() {
 }
 
 function playSound(type) {
+  if (type === 'click') return; // click sound disabled
   initAudio();
   if (!audioCtx) return;
   const now = audioCtx.currentTime;
@@ -529,6 +530,10 @@ function listenToRoom() {
 
       if (data.hugs) {
         checkForNewHug(data.hugs);
+      }
+
+      if (data.signals && data.signals.callInvite) {
+        checkIncomingCallInvite(data.signals.callInvite);
       }
 
       updateTypingIndicator(data.typing || {});
@@ -1154,11 +1159,44 @@ let localStream = null;
 let remoteStream = null;
 let peerConnection = null;
 let isInitiator = false;
+let lastSeenCallInviteTimestamp = 0;
 
 const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
+function checkIncomingCallInvite(inviteData) {
+  if (!inviteData || !inviteData.timestamp) return;
+  if (inviteData.from === myClientId) return;
+  if (inviteData.timestamp <= lastSeenCallInviteTimestamp) return;
+
+  lastSeenCallInviteTimestamp = inviteData.timestamp;
+
+  // If I'm already in the call, no need to show the invite banner.
+  if (localStream) return;
+
+  const banner = document.getElementById('incoming-call-banner');
+  if (banner) banner.classList.remove('hidden-section');
+}
+
+function dismissIncomingCallBanner() {
+  const banner = document.getElementById('incoming-call-banner');
+  if (banner) banner.classList.add('hidden-section');
+}
+
+function acceptIncomingCall() {
+  dismissIncomingCallBanner();
+  startCall();
+}
+
+function showCallConnectedToast() {
+  const toast = document.getElementById('call-connected-toast');
+  if (!toast) return;
+  toast.classList.remove('hidden-section');
+  setTimeout(() => toast.classList.add('hidden-section'), 3500);
+}
+
 async function startCall() {
   playSound('click');
+  dismissIncomingCallBanner();
   try {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     const constraints = {
@@ -1171,6 +1209,9 @@ async function startCall() {
     if (localVideo) localVideo.srcObject = localStream;
 
     createPeerConnection();
+
+    // Let the partner know a call has started so they can join automatically.
+    roomRef.child('signals/callInvite').set({ from: myClientId, timestamp: Date.now() });
 
     roomRef.child('signals/caller').transaction((current) => current || myClientId, async (err, committed, snap) => {
       if (snap.val() === myClientId) {
@@ -1223,6 +1264,12 @@ function createPeerConnection() {
 
   peerConnection.ontrack = (event) => {
     event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
+  };
+
+  peerConnection.onconnectionstatechange = () => {
+    if (peerConnection && peerConnection.connectionState === 'connected') {
+      showCallConnectedToast();
+    }
   };
 
   peerConnection.onicecandidate = (event) => {
@@ -1310,7 +1357,12 @@ function disconnectCall() {
     roomRef.child('signals/offer').remove();
     roomRef.child('signals/answer').remove();
     roomRef.child('signals/candidates').remove();
+    roomRef.child('signals/callInvite').remove();
   }
+
+  dismissIncomingCallBanner();
+  const toast = document.getElementById('call-connected-toast');
+  if (toast) toast.classList.add('hidden-section');
 
   const wrapper = document.getElementById('controls-wrapper');
   if (wrapper) {

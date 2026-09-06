@@ -28,6 +28,18 @@
     </div>
   </div>
 
+  <!-- Incoming Video Call Banner -->
+  <div id="incoming-call-banner" class="hidden-section">
+    <span id="incoming-call-text">🎥 Your partner started a video call!</span>
+    <div id="incoming-call-actions">
+      <button id="incoming-call-join-btn" onclick="acceptIncomingCall()">📞 Join Call</button>
+      <button id="incoming-call-dismiss-btn" onclick="dismissIncomingCallBanner()">✕</button>
+    </div>
+  </div>
+
+  <!-- Call Connected Toast -->
+  <div id="call-connected-toast" class="hidden-section">🎥 Video call connected — you're both live!</div>
+
   <header>
     <div class="header-top-row">
       <div class="header-titles">
