@@ -794,38 +794,48 @@ main {
   40% { opacity: 1; }
 }
 
-/* Video Grids */
-.video-grids {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 12px;
+/* Voice Call Widget */
+.voice-call-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding: 14px 8px;
 }
 
-.video-card {
-  background: #000;
-  border-radius: 10px;
-  overflow: hidden;
-  position: relative;
-  aspect-ratio: 4/3;
-  border: 1px solid var(--border-color);
+.voice-caller-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
 }
 
-.video-card video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.voice-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 2px solid var(--primary-pink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
 }
 
-.video-label {
-  position: absolute;
-  bottom: 6px;
-  left: 6px;
-  background: rgba(0, 0, 0, 0.6);
-  color: white;
-  padding: 2px 6px;
-  font-size: 0.75rem;
-  border-radius: 4px;
+.voice-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: var(--font-display);
+}
+
+.mic-indicator {
+  font-size: 0.95rem;
+}
+
+.voice-vs-badge {
+  font-size: 1.3rem;
 }
 
 .call-controls {
@@ -852,6 +862,174 @@ main {
   color: white;
   border: none;
   flex: 1;
+}
+
+/* ================= MUSIC ROOM ================= */
+.music-source-toggle {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.music-source-btn {
+  padding: 10px 18px;
+  border-radius: 24px;
+  border: 2px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.music-source-btn.active {
+  background: linear-gradient(120deg, var(--primary-pink), var(--accent-purple));
+  color: white;
+  border-color: transparent;
+}
+
+.music-workspace {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .music-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+.music-player-card {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+}
+
+.music-vinyl {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, #111 0%, #111 22%, #333 23%, #333 30%, #111 31%, #111 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.6rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  animation: vinylSpin 6s linear infinite;
+  animation-play-state: paused;
+}
+
+.music-vinyl.spinning {
+  animation-play-state: running;
+}
+
+.music-vinyl img {
+  width: 46%;
+  height: 46%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+@keyframes vinylSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+#music-now-playing-title, #spotify-now-playing-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-align: center;
+  font-size: 1.05rem;
+}
+
+#music-player-hidden-container {
+  width: 240px;
+  height: 135px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+#music-player {
+  width: 100%;
+  height: 100%;
+}
+
+#music-non-host-shield {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  cursor: not-allowed;
+  z-index: 5;
+}
+
+#spotify-disconnected-box, #spotify-connected-box {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.spotify-setup-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.spotify-setup-row input {
+  flex: 1;
+  min-width: 200px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.spotify-setup-row button, #spotify-connected-box > .video-input-box button, #spotify-account-label + button {
+  padding: 8px 14px;
+  background: #1DB954;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.spotify-setup-hint {
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+.spotify-setup-hint code {
+  background: var(--bg-card);
+  padding: 2px 6px;
+  border-radius: 4px;
+  word-break: break-all;
+}
+
+#spotify-account-label {
+  font-weight: bold;
+  color: #1DB954;
+  background: var(--bg-card);
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
 }
 
 /* Chat Widget */
@@ -1470,14 +1648,6 @@ main {
 
   .chat-widget {
     height: min(60vh, 420px);
-  }
-
-  .video-grids {
-    grid-template-columns: 1fr;
-  }
-
-  .video-card {
-    aspect-ratio: 16/10;
   }
 
   .rps-battle-arena {

@@ -30,7 +30,7 @@
 
   <!-- Incoming Video Call Banner -->
   <div id="incoming-call-banner" class="hidden-section">
-    <span id="incoming-call-text">🎥 Your partner started a video call!</span>
+    <span id="incoming-call-text">📞 Your partner started a voice call!</span>
     <div id="incoming-call-actions">
       <button id="incoming-call-join-btn" onclick="acceptIncomingCall()">📞 Join Call</button>
       <button id="incoming-call-dismiss-btn" onclick="dismissIncomingCallBanner()">✕</button>
@@ -38,7 +38,7 @@
   </div>
 
   <!-- Call Connected Toast -->
-  <div id="call-connected-toast" class="hidden-section">🎥 Video call connected — you're both live!</div>
+  <div id="call-connected-toast" class="hidden-section">📞 Voice call connected — you're both live!</div>
 
   <header>
     <div class="header-top-row">
@@ -69,6 +69,7 @@
 
     <nav>
       <button onclick="showSection('watch-party-hub')" class="nav-btn active" data-section="watch-party-hub">🎬 <span>Watch Party</span></button>
+      <button onclick="showSection('music-hub')" class="nav-btn" data-section="music-hub">🎶 <span>Music Room</span></button>
       <button onclick="showSection('album-hub')" class="nav-btn" data-section="album-hub">📸 <span>Memory Lane</span></button>
       <button onclick="showSection('games-hub')" class="nav-btn" data-section="games-hub">🎮 <span>Game Arcade</span></button>
     </nav>
@@ -118,17 +119,22 @@
             </ul>
           </div>
 
-          <!-- INTEGRATED VOICE & VIDEO CALL WIDGET -->
+          <!-- INTEGRATED VOICE CALL WIDGET -->
           <div class="sidebar-widget" id="integrated-call-widget">
-            <h3>🐾 Puppy Voice & Video Call 🎙️</h3>
-            <div class="video-grids">
-              <div class="video-card">
-                <video id="local-video" autoplay playsinline webkit-playsinline muted></video>
-                <span class="video-label">You 🐶</span>
+            <h3>🐾 Puppy Voice Call 🎙️</h3>
+            <audio id="local-audio" autoplay playsinline muted></audio>
+            <audio id="remote-audio" autoplay playsinline></audio>
+            <div class="voice-call-status">
+              <div class="voice-caller-card">
+                <div class="voice-avatar">🐶</div>
+                <span class="voice-label">You</span>
+                <span id="local-mic-indicator" class="mic-indicator">🎤</span>
               </div>
-              <div class="video-card" id="remote-video-card">
-                <video id="remote-video" autoplay playsinline webkit-playsinline></video>
-                <span class="video-label">Partner 💖</span>
+              <div class="voice-vs-badge">📞</div>
+              <div class="voice-caller-card">
+                <div class="voice-avatar">💖</div>
+                <span class="voice-label">Partner</span>
+                <span id="remote-mic-indicator" class="mic-indicator">🎧</span>
               </div>
             </div>
             <div id="controls-wrapper">
@@ -152,6 +158,89 @@
               <input type="file" id="chat-media-file" accept="image/*" class="hidden-section" onchange="handleMediaUpload(event)">
               <button onclick="sendChatMessage()">Send 💕</button>
             </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= MUSIC ROOM TAB ================= -->
+    <section id="music-hub" class="hidden-section">
+      <div class="section-heading">
+        <h2>🎶 Music Room</h2>
+        <p>Listen to the same song at the same time — YouTube Music or Spotify.</p>
+      </div>
+
+      <div class="music-source-toggle">
+        <button id="music-source-youtube-btn" class="music-source-btn active" onclick="switchMusicSource('youtube')">▶️ YouTube Music</button>
+        <button id="music-source-spotify-btn" class="music-source-btn" onclick="switchMusicSource('spotify')">🟢 Spotify</button>
+      </div>
+
+      <!-- ===== YOUTUBE MUSIC PANEL ===== -->
+      <div id="music-youtube-panel" class="music-panel">
+        <div class="watchparty-header-bar">
+          <div class="host-status-box">
+            <span id="music-host-badge">👑 Host: Checking...</span>
+            <button onclick="claimHostRole()">👑 Claim Host</button>
+          </div>
+          <div class="video-input-box">
+            <input type="text" id="music-url-input" placeholder="Paste YouTube / YouTube Music Link...">
+            <button onclick="loadPastedMusic()">▶️ Play Now</button>
+            <button onclick="addToMusicQueue()">➕ Queue</button>
+          </div>
+        </div>
+
+        <div class="music-workspace">
+          <div class="music-player-card">
+            <div id="music-vinyl" class="music-vinyl">
+              <img id="music-art" src="" alt="" class="hidden-section">
+              <span id="music-art-placeholder">🎵</span>
+            </div>
+            <div id="music-now-playing-title">Nothing playing yet — paste a link above! 🎧</div>
+            <div id="music-player-hidden-container"><div id="music-player"></div></div>
+            <div id="music-non-host-shield" class="hidden-section" title="Only Host controls playback!"></div>
+          </div>
+
+          <div class="sidebar-widget" id="music-queue-widget">
+            <h3>🎧 Up Next</h3>
+            <ul id="music-queue-list" class="queue-list">
+              <li class="queue-empty">Queue's empty — add a song above! 🎶</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== SPOTIFY PANEL ===== -->
+      <div id="music-spotify-panel" class="music-panel hidden-section">
+        <div id="spotify-disconnected-box">
+          <p>Connect your Spotify Premium account so this device can be remote-controlled in sync with your partner's.</p>
+          <div class="spotify-setup-row">
+            <input type="text" id="spotify-client-id-input" placeholder="Your Spotify App Client ID">
+            <button onclick="connectSpotify()">🟢 Connect Spotify</button>
+          </div>
+          <p class="spotify-setup-hint">First time? Create a free app at <strong>developer.spotify.com/dashboard</strong> and add this exact URL as a Redirect URI: <code id="spotify-redirect-uri-display"></code></p>
+        </div>
+
+        <div id="spotify-connected-box" class="hidden-section">
+          <div class="host-status-box">
+            <span id="spotify-account-label">✅ Connected</span>
+            <button onclick="disconnectSpotify()">🔌 Disconnect</button>
+          </div>
+
+          <div class="video-input-box">
+            <input type="text" id="spotify-track-input" placeholder="Paste a Spotify track link...">
+            <button onclick="playPastedSpotifyTrack()">▶️ Play for Both</button>
+          </div>
+
+          <div class="music-player-card">
+            <div id="spotify-vinyl" class="music-vinyl">
+              <img id="spotify-art" src="" alt="" class="hidden-section">
+              <span id="spotify-art-placeholder">🎵</span>
+            </div>
+            <div id="spotify-now-playing-title">Nothing playing yet — paste a track link above! 🎧</div>
+            <div class="call-controls">
+              <button onclick="toggleSpotifyPlayback()">⏯️ Play/Pause</button>
+            </div>
+            <p class="spotify-setup-hint">Make sure Spotify is open and active on your device (phone, desktop, or web player) before pressing play.</p>
           </div>
         </div>
       </div>

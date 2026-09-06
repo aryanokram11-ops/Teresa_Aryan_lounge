@@ -57,6 +57,14 @@ window.addEventListener('DOMContentLoaded', () => {
 
   joinRoom(true);
   setupTapHeartBurst();
+
+  const savedClientId = localStorage.getItem('spotify_client_id');
+  const clientIdInput = document.getElementById('spotify-client-id-input');
+  if (clientIdInput && savedClientId) clientIdInput.value = savedClientId;
+
+  handleSpotifyAuthRedirect().then(() => {
+    updateSpotifyConnectedUI();
+  });
 });
 
 // ================= TAP-ANYWHERE HEART BURST =================
@@ -195,6 +203,15 @@ let localPlayerIsPlaying = false;
 let heartbeatInterval = null;
 let currentLoadedVideoId = null;
 
+let musicPlayer;
+let isMusicRemoteAction = false;
+let lastMusicState = null;
+let localMusicIsPlaying = false;
+let musicHeartbeatInterval = null;
+let currentLoadedMusicId = null;
+let musicQueueData = {};
+let currentMusicSource = 'youtube';
+
 function isCurrentHost() {
   return currentHostId === 'BOTH_HOSTS' || currentHostId === myClientId;
 }
@@ -213,6 +230,22 @@ function onYouTubeIframeAPIReady() {
     events: {
       'onReady': onPlayerReady,
       'onStateChange': onPlayerStateChange
+    }
+  });
+
+  musicPlayer = new YT.Player('music-player', {
+    height: '100%',
+    width: '100%',
+    playerVars: {
+      'playsinline': 1,
+      'controls': 1,
+      'fs': 0,
+      'autoplay': 0,
+      'enablejsapi': 1
+    },
+    events: {
+      'onReady': onMusicPlayerReady,
+      'onStateChange': onMusicPlayerStateChange
     }
   });
 }
@@ -399,6 +432,490 @@ function playNextInQueue() {
   playQueueItem(keys[0]);
 }
 
+// ================= MUSIC ROOM (YOUTUBE MUSIC SYNC) =================
+function switchMusicSource(source) {
+  playSound('click');
+  currentMusicSource = source;
+  document.getElementById('music-source-youtube-btn').classList.toggle('active', source === 'youtube');
+  document.getElementById('music-source-spotify-btn').classList.toggle('active', source === 'spotify');
+  document.getElementById('music-youtube-panel').classList.toggle('hidden-section', source !== 'youtube');
+  document.getElementById('music-spotify-panel').classList.toggle('hidden-section', source !== 'spotify');
+}
+
+function onMusicPlayerReady() {
+  console.log("Music Player Ready 🎶");
+  if (lastMusicState) {
+    applyRemoteMusicState(lastMusicState);
+  }
+  if (!musicHeartbeatInterval) {
+    musicHeartbeatInterval = setInterval(sendMusicHeartbeatSync, 4000);
+  }
+  updateMusicHostUI();
+}
+
+function updateMusicHostUI() {
+  const badge = document.getElementById('music-host-badge');
+  const shield = document.getElementById('music-non-host-shield');
+  if (!badge || !shield) return;
+  if (currentHostId === 'BOTH_HOSTS') {
+    badge.innerText = "👑 Co-Host: Both of You! 💕";
+    shield.classList.add('hidden-section');
+  } else if (currentHostId === myClientId) {
+    badge.innerText = "👑 Host: You";
+    shield.classList.add('hidden-section');
+  } else if (currentHostId) {
+    badge.innerText = "👑 Host: Partner";
+    shield.classList.remove('hidden-section');
+  } else {
+    badge.innerText = "👑 Host: Not Decided";
+    shield.classList.add('hidden-section');
+  }
+}
+
+function fetchMusicTitle(videoId) {
+  fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+    .then(res => res.ok ? res.json() : null)
+    .then(data => {
+      const titleEl = document.getElementById('music-now-playing-title');
+      if (titleEl && data && data.title) titleEl.innerText = `🎵 ${data.title}`;
+    })
+    .catch(() => {});
+
+  const art = document.getElementById('music-art');
+  const placeholder = document.getElementById('music-art-placeholder');
+  if (art) {
+    art.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+    art.classList.remove('hidden-section');
+  }
+  if (placeholder) placeholder.classList.add('hidden-section');
+}
+
+function applyRemoteMusicState(m) {
+  if (!musicPlayer || typeof musicPlayer.loadVideoById !== 'function') return;
+  if (m.updatedBy && m.updatedBy === myClientId) return;
+
+  isMusicRemoteAction = true;
+  const networkDelay = Math.max(0, (Date.now() - (m.timestamp || Date.now())) / 1000);
+  const targetTime = Math.max(0, (m.time || 0) + ((m.action === 'PLAY' || m.action === 'SYNC') ? networkDelay : 0));
+
+  if (m.videoId && m.videoId !== currentLoadedMusicId) {
+    currentLoadedMusicId = m.videoId;
+    musicPlayer.loadVideoById(m.videoId, targetTime);
+    fetchMusicTitle(m.videoId);
+    if (m.action === 'PAUSE') {
+      setTimeout(() => { if (musicPlayer && musicPlayer.pauseVideo) musicPlayer.pauseVideo(); }, 500);
+    }
+  } else if (musicPlayer.getCurrentTime && musicPlayer.getPlayerState) {
+    const localTime = musicPlayer.getCurrentTime();
+    if (Math.abs(localTime - targetTime) > 1) {
+      musicPlayer.seekTo(targetTime, true);
+    }
+    if (m.action === 'PLAY') {
+      musicPlayer.playVideo();
+    } else if (m.action === 'PAUSE') {
+      musicPlayer.pauseVideo();
+    }
+  }
+
+  setTimeout(() => { isMusicRemoteAction = false; }, 600);
+}
+
+function sendMusicHeartbeatSync() {
+  if (!isCurrentHost() || !localMusicIsPlaying) return;
+  if (!musicPlayer || typeof musicPlayer.getCurrentTime !== 'function') return;
+  if (isMusicRemoteAction) return;
+
+  roomRef.child('music').set({
+    action: 'SYNC',
+    videoId: currentLoadedMusicId,
+    time: musicPlayer.getCurrentTime(),
+    updatedBy: myClientId,
+    timestamp: Date.now()
+  });
+}
+
+function onMusicPlayerStateChange(event) {
+  const vinyl = document.getElementById('music-vinyl');
+  if (event.data === YT.PlayerState.PLAYING) {
+    localMusicIsPlaying = true;
+    if (vinyl) vinyl.classList.add('spinning');
+  }
+  if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+    localMusicIsPlaying = false;
+    if (vinyl) vinyl.classList.remove('spinning');
+  }
+
+  if (isMusicRemoteAction) return;
+  if (!isCurrentHost()) return;
+  if (!musicPlayer || typeof musicPlayer.getCurrentTime !== 'function') return;
+
+  const currentTime = musicPlayer.getCurrentTime();
+  if (event.data === YT.PlayerState.PLAYING) {
+    roomRef.child('music').set({
+      action: 'PLAY',
+      videoId: currentLoadedMusicId,
+      time: currentTime,
+      updatedBy: myClientId,
+      timestamp: Date.now()
+    });
+  } else if (event.data === YT.PlayerState.PAUSED) {
+    roomRef.child('music').set({
+      action: 'PAUSE',
+      videoId: currentLoadedMusicId,
+      time: currentTime,
+      updatedBy: myClientId,
+      timestamp: Date.now()
+    });
+  } else if (event.data === YT.PlayerState.ENDED) {
+    playNextInMusicQueue();
+  }
+}
+
+function loadMusicIdNow(videoId) {
+  if (currentHostId !== 'BOTH_HOSTS' && currentHostId !== myClientId) {
+    alert("Only the current Host can play music! Click 'Claim Host' to take control 👑");
+    return false;
+  }
+  if (!musicPlayer || typeof musicPlayer.loadVideoById !== 'function') return false;
+
+  currentLoadedMusicId = videoId;
+  musicPlayer.loadVideoById(videoId);
+  fetchMusicTitle(videoId);
+  roomRef.child('music').set({
+    action: 'LOAD',
+    videoId: videoId,
+    time: 0,
+    updatedBy: myClientId,
+    timestamp: Date.now()
+  });
+  return true;
+}
+
+function loadPastedMusic() {
+  playSound('click');
+  const musicInput = document.getElementById('music-url-input');
+  if (!musicInput) return;
+  const videoId = extractVideoId(musicInput.value.trim());
+
+  if (!videoId) return alert("Please enter a valid YouTube / YouTube Music link! 🥺");
+  if (loadMusicIdNow(videoId)) musicInput.value = '';
+}
+
+// ================= MUSIC QUEUE =================
+function addToMusicQueue() {
+  playSound('click');
+  const musicInput = document.getElementById('music-url-input');
+  if (!musicInput) return;
+  const videoId = extractVideoId(musicInput.value.trim());
+  if (!videoId) return alert("Please enter a valid YouTube / YouTube Music link! 🥺");
+
+  musicQueueRef.push({
+    videoId: videoId,
+    addedBy: myClientId,
+    timestamp: firebase.database.ServerValue.TIMESTAMP
+  });
+  musicInput.value = '';
+}
+
+function renderMusicQueue(queue) {
+  const list = document.getElementById('music-queue-list');
+  if (!list) return;
+  const keys = Object.keys(queue || {});
+
+  if (keys.length === 0) {
+    list.innerHTML = '<li class="queue-empty">Queue\'s empty — add a song above! 🎶</li>';
+    return;
+  }
+
+  list.innerHTML = keys.map(key => {
+    const item = queue[key];
+    const mine = item.addedBy === myClientId ? 'You' : 'Partner';
+    return `
+      <li class="queue-item">
+        <img src="https://img.youtube.com/vi/${item.videoId}/mqdefault.jpg" alt="Queued song thumbnail">
+        <div class="queue-item-info">Added by ${mine}</div>
+        <div class="queue-item-actions">
+          <button onclick="playMusicQueueItem('${key}')">▶️</button>
+          <button class="remove-btn" onclick="removeMusicQueueItem('${key}')">✕</button>
+        </div>
+      </li>
+    `;
+  }).join('');
+}
+
+function playMusicQueueItem(key) {
+  playSound('click');
+  const item = musicQueueData[key];
+  if (!item) return;
+  if (loadMusicIdNow(item.videoId)) {
+    musicQueueRef.child(key).remove();
+  }
+}
+
+function removeMusicQueueItem(key) {
+  playSound('click');
+  musicQueueRef.child(key).remove();
+}
+
+function playNextInMusicQueue() {
+  if (!isCurrentHost()) return;
+  const keys = Object.keys(musicQueueData || {});
+  if (keys.length === 0) return;
+  playMusicQueueItem(keys[0]);
+}
+
+// ================= MUSIC ROOM (SPOTIFY SYNC) =================
+const SPOTIFY_REDIRECT_URI = window.location.origin + window.location.pathname;
+const SPOTIFY_SCOPES = 'user-read-playback-state user-modify-playback-state user-read-currently-playing';
+let spotifyAccessToken = localStorage.getItem('spotify_access_token') || null;
+let spotifyRefreshToken = localStorage.getItem('spotify_refresh_token') || null;
+let spotifyTokenExpiry = Number(localStorage.getItem('spotify_token_expiry') || 0);
+let spotifyPollInterval = null;
+
+function base64UrlEncode(buffer) {
+  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function generateCodeChallenge(verifier) {
+  const data = new TextEncoder().encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return base64UrlEncode(digest);
+}
+
+function generateRandomString(length) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+  return result;
+}
+
+async function connectSpotify() {
+  playSound('click');
+  const clientIdInput = document.getElementById('spotify-client-id-input');
+  const clientId = clientIdInput ? clientIdInput.value.trim() : '';
+  if (!clientId) return alert("Please paste your Spotify App Client ID first! 🥺");
+
+  localStorage.setItem('spotify_client_id', clientId);
+  const verifier = generateRandomString(64);
+  localStorage.setItem('spotify_code_verifier', verifier);
+  const challenge = await generateCodeChallenge(verifier);
+
+  const authUrl = new URL('https://accounts.spotify.com/authorize');
+  authUrl.searchParams.set('client_id', clientId);
+  authUrl.searchParams.set('response_type', 'code');
+  authUrl.searchParams.set('redirect_uri', SPOTIFY_REDIRECT_URI);
+  authUrl.searchParams.set('scope', SPOTIFY_SCOPES);
+  authUrl.searchParams.set('code_challenge_method', 'S256');
+  authUrl.searchParams.set('code_challenge', challenge);
+
+  window.location.href = authUrl.toString();
+}
+
+async function handleSpotifyAuthRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  if (!code) return;
+
+  const clientId = localStorage.getItem('spotify_client_id');
+  const verifier = localStorage.getItem('spotify_code_verifier');
+  if (!clientId || !verifier) return;
+
+  try {
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: code,
+        redirect_uri: SPOTIFY_REDIRECT_URI,
+        client_id: clientId,
+        code_verifier: verifier
+      })
+    });
+    const data = await res.json();
+    if (data.access_token) {
+      spotifyAccessToken = data.access_token;
+      spotifyRefreshToken = data.refresh_token;
+      spotifyTokenExpiry = Date.now() + (data.expires_in * 1000);
+      localStorage.setItem('spotify_access_token', spotifyAccessToken);
+      localStorage.setItem('spotify_refresh_token', spotifyRefreshToken);
+      localStorage.setItem('spotify_token_expiry', String(spotifyTokenExpiry));
+    }
+  } catch (e) {
+    console.error("Spotify token exchange failed", e);
+  }
+
+  window.history.replaceState({}, document.title, window.location.pathname);
+  updateSpotifyConnectedUI();
+}
+
+async function ensureSpotifyToken() {
+  if (spotifyAccessToken && Date.now() < spotifyTokenExpiry - 30000) return spotifyAccessToken;
+  if (!spotifyRefreshToken) return null;
+
+  const clientId = localStorage.getItem('spotify_client_id');
+  try {
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: spotifyRefreshToken,
+        client_id: clientId
+      })
+    });
+    const data = await res.json();
+    if (data.access_token) {
+      spotifyAccessToken = data.access_token;
+      spotifyTokenExpiry = Date.now() + (data.expires_in * 1000);
+      localStorage.setItem('spotify_access_token', spotifyAccessToken);
+      localStorage.setItem('spotify_token_expiry', String(spotifyTokenExpiry));
+      if (data.refresh_token) {
+        spotifyRefreshToken = data.refresh_token;
+        localStorage.setItem('spotify_refresh_token', spotifyRefreshToken);
+      }
+      return spotifyAccessToken;
+    }
+  } catch (e) {
+    console.error("Spotify token refresh failed", e);
+  }
+  return null;
+}
+
+async function spotifyApiFetch(endpoint, options = {}) {
+  const token = await ensureSpotifyToken();
+  if (!token) throw new Error('Not connected to Spotify');
+  return fetch(`https://api.spotify.com/v1${endpoint}`, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+}
+
+function disconnectSpotify() {
+  playSound('click');
+  spotifyAccessToken = null;
+  spotifyRefreshToken = null;
+  spotifyTokenExpiry = 0;
+  localStorage.removeItem('spotify_access_token');
+  localStorage.removeItem('spotify_refresh_token');
+  localStorage.removeItem('spotify_token_expiry');
+  clearInterval(spotifyPollInterval);
+  updateSpotifyConnectedUI();
+}
+
+function updateSpotifyConnectedUI() {
+  const disconnectedBox = document.getElementById('spotify-disconnected-box');
+  const connectedBox = document.getElementById('spotify-connected-box');
+  const redirectDisplay = document.getElementById('spotify-redirect-uri-display');
+  if (redirectDisplay) redirectDisplay.innerText = SPOTIFY_REDIRECT_URI;
+
+  if (!disconnectedBox || !connectedBox) return;
+
+  if (spotifyAccessToken) {
+    disconnectedBox.classList.add('hidden-section');
+    connectedBox.classList.remove('hidden-section');
+    spotifyApiFetch('/me').then(res => res.json()).then(me => {
+      const label = document.getElementById('spotify-account-label');
+      if (label && me && me.display_name) label.innerText = `✅ Connected as ${me.display_name}`;
+    }).catch(() => {});
+    if (!spotifyPollInterval) {
+      spotifyPollInterval = setInterval(pollSpotifyNowPlaying, 5000);
+      pollSpotifyNowPlaying();
+    }
+  } else {
+    disconnectedBox.classList.remove('hidden-section');
+    connectedBox.classList.add('hidden-section');
+  }
+}
+
+function pollSpotifyNowPlaying() {
+  if (!spotifyAccessToken) return;
+  spotifyApiFetch('/me/player/currently-playing').then(res => {
+    if (res.status === 204) return null;
+    return res.json();
+  }).then(data => {
+    if (!data || !data.item) return;
+    const titleEl = document.getElementById('spotify-now-playing-title');
+    if (titleEl) titleEl.innerText = `🎵 ${data.item.name} — ${data.item.artists.map(a => a.name).join(', ')}`;
+
+    const art = document.getElementById('spotify-art');
+    const placeholder = document.getElementById('spotify-art-placeholder');
+    const vinyl = document.getElementById('spotify-vinyl');
+    if (art && data.item.album && data.item.album.images && data.item.album.images[0]) {
+      art.src = data.item.album.images[0].url;
+      art.classList.remove('hidden-section');
+    }
+    if (placeholder) placeholder.classList.add('hidden-section');
+    if (vinyl) vinyl.classList.toggle('spinning', !!data.is_playing);
+  }).catch(() => {});
+}
+
+function extractSpotifyTrackId(url) {
+  const match = url.match(/track[/:]([a-zA-Z0-9]{22})/);
+  return match ? match[1] : null;
+}
+
+function playPastedSpotifyTrack() {
+  playSound('click');
+  if (currentHostId !== 'BOTH_HOSTS' && currentHostId !== myClientId) {
+    return alert("Only the current Host can play music! Click 'Claim Host' in the YouTube Music tab to take control 👑");
+  }
+  const input = document.getElementById('spotify-track-input');
+  if (!input) return;
+  const trackId = extractSpotifyTrackId(input.value.trim());
+  if (!trackId) return alert("Please paste a valid Spotify track link! 🥺");
+
+  roomRef.child('spotifyMusic').set({
+    trackUri: `spotify:track:${trackId}`,
+    isPlaying: true,
+    positionMs: 0,
+    updatedBy: myClientId,
+    timestamp: Date.now()
+  });
+  input.value = '';
+}
+
+function toggleSpotifyPlayback() {
+  playSound('click');
+  if (!spotifyAccessToken) return;
+  spotifyApiFetch('/me/player/currently-playing').then(res => res.status === 204 ? null : res.json()).then(data => {
+    const isPlaying = data ? data.is_playing : false;
+    roomRef.child('spotifyMusic').set({
+      trackUri: data && data.item ? data.item.uri : null,
+      isPlaying: !isPlaying,
+      positionMs: data ? data.progress_ms : 0,
+      updatedBy: myClientId,
+      timestamp: Date.now()
+    });
+  }).catch(() => {
+    alert("Couldn't reach your Spotify player. Make sure Spotify is open and active on a device! 🥺");
+  });
+}
+
+function applyRemoteSpotifyState(state) {
+  if (!state || !spotifyAccessToken) return;
+  if (state.updatedBy === myClientId) return;
+
+  const networkDelay = state.isPlaying ? Math.max(0, Date.now() - (state.timestamp || Date.now())) : 0;
+  const targetPositionMs = Math.max(0, (state.positionMs || 0) + networkDelay);
+
+  if (state.isPlaying && state.trackUri) {
+    spotifyApiFetch('/me/player/play', {
+      method: 'PUT',
+      body: JSON.stringify({ uris: [state.trackUri], position_ms: targetPositionMs })
+    }).catch(() => {
+      alert("Couldn't start Spotify on this device. Open Spotify and make sure it's active! 🥺");
+    });
+  } else if (!state.isPlaying) {
+    spotifyApiFetch('/me/player/pause', { method: 'PUT' }).catch(() => {});
+  }
+}
+
 // ================= LIVE REACTIONS =================
 function sendReaction(emoji) {
   playSound('click');
@@ -436,6 +953,7 @@ const db = firebase.database();
 let currentPartnerCode = "love-lounge";
 let roomRef = db.ref('rooms/' + currentPartnerCode);
 let queueRef = db.ref('queues/' + currentPartnerCode);
+let musicQueueRef = db.ref('musicQueues/' + currentPartnerCode);
 let albumRef = db.ref('albums/' + currentPartnerCode);
 let reactionsRef = db.ref('reactions_live/' + currentPartnerCode);
 let myPresenceRef = null;
@@ -544,6 +1062,19 @@ function listenToRoom() {
           applyRemoteWatchPartyState(data.watchParty);
         }
       }
+
+      if (data.music) {
+        lastMusicState = data.music;
+        if (musicPlayer && typeof musicPlayer.loadVideoById === 'function') {
+          applyRemoteMusicState(data.music);
+        }
+      }
+
+      updateMusicHostUI();
+
+      if (data.spotifyMusic) {
+        applyRemoteSpotifyState(data.spotifyMusic);
+      }
     } else {
       if (statusEl) statusEl.innerText = `Waiting for puppy partner... ⏳🐕`;
     }
@@ -558,6 +1089,12 @@ function listenToRoom() {
   queueRef.on('value', (snapshot) => {
     queueData = snapshot.val() || {};
     renderQueue(queueData);
+  });
+
+  musicQueueRef.off();
+  musicQueueRef.on('value', (snapshot) => {
+    musicQueueData = snapshot.val() || {};
+    renderMusicQueue(musicQueueData);
   });
 
   albumRef.off();
@@ -584,6 +1121,7 @@ function joinRoom(isAuto = false) {
   localStorage.setItem('lounge_partner_code', currentPartnerCode);
   roomRef = db.ref('rooms/' + currentPartnerCode);
   queueRef = db.ref('queues/' + currentPartnerCode);
+  musicQueueRef = db.ref('musicQueues/' + currentPartnerCode);
   albumRef = db.ref('albums/' + currentPartnerCode);
   reactionsRef = db.ref('reactions_live/' + currentPartnerCode);
   
@@ -1198,15 +1736,13 @@ async function startCall() {
   playSound('click');
   dismissIncomingCallBanner();
   try {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     const constraints = {
-      audio: { echoCancellation: true, noiseSuppression: true },
-      video: isMobile ? { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } : { width: { ideal: 1280 }, height: { ideal: 720 } }
+      audio: { echoCancellation: true, noiseSuppression: true }
     };
 
     localStream = await navigator.mediaDevices.getUserMedia(constraints);
-    const localVideo = document.getElementById('local-video');
-    if (localVideo) localVideo.srcObject = localStream;
+    const localAudio = document.getElementById('local-audio');
+    if (localAudio) localAudio.srcObject = localStream;
 
     createPeerConnection();
 
@@ -1250,7 +1786,7 @@ async function startCall() {
     renderActiveCallControls();
 
   } catch (err) {
-    alert("Camera/Microphone access error! Check iOS permissions in Settings -> Safari/Chrome 🥺");
+    alert("Microphone access error! Check iOS permissions in Settings -> Safari/Chrome 🥺");
   }
 }
 
@@ -1259,11 +1795,13 @@ function createPeerConnection() {
   localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
   remoteStream = new MediaStream();
-  const remoteVideo = document.getElementById('remote-video');
-  if (remoteVideo) remoteVideo.srcObject = remoteStream;
+  const remoteAudio = document.getElementById('remote-audio');
+  if (remoteAudio) remoteAudio.srcObject = remoteStream;
 
   peerConnection.ontrack = (event) => {
     event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
+    const remoteIndicator = document.getElementById('remote-mic-indicator');
+    if (remoteIndicator) remoteIndicator.innerText = '🎤';
   };
 
   peerConnection.onconnectionstatechange = () => {
@@ -1288,8 +1826,6 @@ function renderActiveCallControls() {
   wrapper.innerHTML = `
     <div class="call-controls">
       <button class="audio-btn" onclick="toggleAudio()">🎤 Mute</button>
-      <button class="video-btn" onclick="toggleVideo()">📹 Cam Off</button>
-      <button class="fs-btn" onclick="toggleRemoteFullscreen()">⛶ Fullscreen</button>
       <button class="disconnect-btn" style="background:#ff4757;" onclick="disconnectCall()">🛑 Disconnect</button>
     </div>
   `;
@@ -1302,27 +1838,8 @@ function toggleAudio() {
   track.enabled = !track.enabled;
   const audioBtn = document.querySelector('.audio-btn');
   if (audioBtn) audioBtn.innerText = track.enabled ? "🎤 Mute" : "🔇 Unmuted";
-}
-
-function toggleVideo() {
-  if (!localStream) return;
-  const track = localStream.getVideoTracks()[0];
-  if (!track) return;
-  track.enabled = !track.enabled;
-  const videoBtn = document.querySelector('.video-btn');
-  if (videoBtn) videoBtn.innerText = track.enabled ? "📹 Cam Off" : "📷 Cam On";
-}
-
-function toggleRemoteFullscreen() {
-  const container = document.getElementById('remote-video-card');
-  if (!container) return;
-  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-    if (container.requestFullscreen) container.requestFullscreen();
-    else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
-  } else {
-    if (document.exitFullscreen) document.exitFullscreen();
-    else if (document.webkitExitFullscreen) document.exitFullscreen();
-  }
+  const localIndicator = document.getElementById('local-mic-indicator');
+  if (localIndicator) localIndicator.innerText = track.enabled ? "🎤" : "🔇";
 }
 
 function disconnectCall() {
@@ -1341,14 +1858,20 @@ function disconnectCall() {
   if (peerConnection) {
     peerConnection.onicecandidate = null;
     peerConnection.ontrack = null;
+    peerConnection.onconnectionstatechange = null;
     peerConnection.close();
     peerConnection = null;
   }
 
-  const localVideo = document.getElementById('local-video');
-  const remoteVideo = document.getElementById('remote-video');
-  if (localVideo) localVideo.srcObject = null;
-  if (remoteVideo) remoteVideo.srcObject = null;
+  const localAudio = document.getElementById('local-audio');
+  const remoteAudio = document.getElementById('remote-audio');
+  if (localAudio) localAudio.srcObject = null;
+  if (remoteAudio) remoteAudio.srcObject = null;
+
+  const localIndicator = document.getElementById('local-mic-indicator');
+  const remoteIndicator = document.getElementById('remote-mic-indicator');
+  if (localIndicator) localIndicator.innerText = '🎤';
+  if (remoteIndicator) remoteIndicator.innerText = '🎧';
 
   if (roomRef) {
     roomRef.child('signals/answer').off();
