@@ -2,8 +2,12 @@
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- iOS optimized viewport preventing unwanted zoom on focus -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Puppy Love Lounge & Watch Party 🐾💖</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -16,13 +20,30 @@
   <!-- Floating Dog Meme Rain Container -->
   <div id="meme-rain-container"></div>
 
+  <!-- Tap-anywhere Heart Burst Layer -->
+  <div id="tap-heart-layer"></div>
+
+  <!-- Full-screen Hug/Kiss Overlay -->
+  <div id="hug-overlay" class="hidden-section">
+    <div id="hug-overlay-content">
+      <div id="hug-emoji-burst">🤗</div>
+      <p id="hug-overlay-text">Sending a big puppy hug!</p>
+    </div>
+  </div>
+
   <header>
     <div class="header-top-row">
       <div class="header-titles">
         <h1>🐶 Puppy Love Lounge 💖</h1>
         <p>Your ultimate synchronized watch party & date night hub!</p>
       </div>
-      <button id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">🌙</button>
+      <div class="header-actions">
+        <button id="love-meter-btn" onclick="sendLoveTap()" title="Tap to send love!">
+          <span id="love-meter-heart">💗</span>
+          <span id="love-meter-count">0</span>
+        </button>
+        <button id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">🌙</button>
+      </div>
     </div>
     
     <div id="room-controls-bar">
@@ -38,23 +59,30 @@
     </div>
 
     <nav>
-      <button onclick="showSection('watch-party-hub')" class="nav-btn active">🎬 Watch Party</button>
-      <button onclick="showSection('games-hub')" class="nav-btn">🎮 Game Arcade</button>
+      <button onclick="showSection('watch-party-hub')" class="nav-btn active" data-section="watch-party-hub">🎬 <span>Watch Party</span></button>
+      <button onclick="showSection('album-hub')" class="nav-btn" data-section="album-hub">📸 <span>Memory Lane</span></button>
+      <button onclick="showSection('games-hub')" class="nav-btn" data-section="games-hub">🎮 <span>Game Arcade</span></button>
     </nav>
   </header>
 
   <main>
     <!-- ================= WATCH PARTY TAB ================= -->
     <section id="watch-party-hub" class="active-section">
-      
+
+      <div class="section-heading">
+        <h2>🎬 Watch Party</h2>
+        <p>Paste any YouTube link, sync playback perfectly, and line up what's next.</p>
+      </div>
+
       <div class="watchparty-header-bar">
         <div class="host-status-box">
           <span id="host-badge">👑 Host: Checking...</span>
-          <button id="open-rps-btn" onclick="openRpsModal()">⚔️ Play RPS for Host</button>
+          <button id="claim-host-btn" onclick="claimHostRole()">👑 Claim Host</button>
         </div>
         <div class="video-input-box">
           <input type="text" id="video-url-input" placeholder="Paste YouTube Link...">
-          <button onclick="loadPastedVideo()">Load 🚀</button>
+          <button onclick="loadPastedVideo()">▶️ Play Now</button>
+          <button id="queue-add-btn" onclick="addToQueue()">➕ Queue</button>
         </div>
       </div>
 
@@ -62,14 +90,55 @@
         <div class="video-player-main-container">
           <div id="youtube-player"></div>
           <div id="non-host-shield" class="hidden-section" title="Only Host controls playback!"></div>
+          <div id="reactions-layer"></div>
+          <div class="reaction-bar">
+            <button class="reaction-btn" onclick="sendReaction('❤️')">❤️</button>
+            <button class="reaction-btn" onclick="sendReaction('🔥')">🔥</button>
+            <button class="reaction-btn" onclick="sendReaction('😂')">😂</button>
+            <button class="reaction-btn" onclick="sendReaction('😮')">😮</button>
+            <button class="reaction-btn" onclick="sendReaction('🐾')">🐾</button>
+          </div>
         </div>
 
         <div class="watchparty-sidebar">
+          <!-- WATCH QUEUE WIDGET -->
+          <div class="sidebar-widget" id="queue-widget">
+            <h3>🎞️ Up Next</h3>
+            <ul id="queue-list" class="queue-list">
+              <li class="queue-empty">Queue's empty — add a video above! 🐾</li>
+            </ul>
+          </div>
+
+          <!-- INTEGRATED VOICE & VIDEO CALL WIDGET -->
+          <div class="sidebar-widget" id="integrated-call-widget">
+            <h3>🐾 Puppy Voice & Video Call 🎙️</h3>
+            <div class="video-grids">
+              <div class="video-card">
+                <video id="local-video" autoplay playsinline webkit-playsinline muted></video>
+                <span class="video-label">You 🐶</span>
+              </div>
+              <div class="video-card" id="remote-video-card">
+                <video id="remote-video" autoplay playsinline webkit-playsinline></video>
+                <span class="video-label">Partner 💖</span>
+              </div>
+            </div>
+            <div id="controls-wrapper">
+              <div class="call-controls">
+                <button class="call-btn" onclick="startCall()">Connect Call</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- LOVE CHAT WIDGET -->
           <div class="sidebar-widget chat-widget">
-            <h3>💬 Love Chat & Media</h3>
+            <div class="chat-widget-header">
+              <h3>💬 Love Chat & Media</h3>
+              <button id="hug-btn" onclick="sendHug()" title="Send a big puppy hug!">🤗 Hug</button>
+            </div>
             <div id="chat-messages-container"></div>
+            <div id="typing-indicator" class="hidden-section">Partner is typing<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></div>
             <div class="chat-input-row">
-              <input type="text" id="chat-text-input" placeholder="Say something sweet... (Type 'I love you' 3x for Co-Host!)" onkeydown="handleChatKeyDown(event)">
+              <input type="text" id="chat-text-input" placeholder="Say something sweet..." onkeydown="handleChatKeyDown(event)" oninput="notifyTyping()">
               <label for="chat-media-file" class="media-upload-btn" title="Upload Image">📷</label>
               <input type="file" id="chat-media-file" accept="image/*" class="hidden-section" onchange="handleMediaUpload(event)">
               <button onclick="sendChatMessage()">Send 💕</button>
@@ -79,10 +148,31 @@
       </div>
     </section>
 
+    <!-- ================= MEMORY LANE TAB ================= -->
+    <section id="album-hub" class="hidden-section">
+      <div class="section-heading">
+        <h2>📸 Memory Lane</h2>
+        <p>Your shared collage of favorite moments — upload photos and short clips to keep together.</p>
+      </div>
+
+      <div class="album-toolbar">
+        <label for="album-file-input" class="album-upload-btn">📤 Add Photos & Videos</label>
+        <input type="file" id="album-file-input" accept="image/*,video/*" multiple class="hidden-section" onchange="handleAlbumUpload(event)">
+        <span id="album-upload-status"></span>
+      </div>
+
+      <div id="album-grid" class="album-grid">
+        <p id="album-empty-msg" class="album-empty">No memories yet — upload your first photo or video together! 💕</p>
+      </div>
+    </section>
+
     <!-- ================= GAMES ARCADE TAB ================= -->
     <section id="games-hub" class="hidden-section">
+      <div class="section-heading">
+        <h2>🎮 Game Arcade</h2>
+        <p>Pick a date-night game and settle the score together.</p>
+      </div>
       <div id="game-selection-menu">
-        <h2>Choose a Date Night Game! 🐾</h2>
         <div class="game-cards-row">
           <div class="game-card" onclick="selectGame('tictactoe')">
             <h3>⭕ Tic-Tac-Toe</h3>
@@ -203,43 +293,15 @@
     </section>
   </main>
 
-  <!-- ================= HOST BATTLE MODAL ================= -->
-  <div id="rps-modal" class="modal-overlay hidden-section">
-    <div class="modal-content">
-      <h2>⚔️ Rock Paper Scissors Battle</h2>
-      <p>Winner takes the <strong>Host Crown</strong> (Or type "I love you" 3x in chat for Co-Host!)</p>
-      <div id="rps-choices" class="rps-buttons-row">
-        <button onclick="playRps('Rock')">✊ Rock</button>
-        <button onclick="playRps('Paper')">✋ Paper</button>
-        <button onclick="playRps('Scissors')">✌️ Scissors</button>
-      </div>
-      <div id="rps-result-display" class="rps-result-box">Make your choice to settle who hosts!</div>
-      <button class="close-modal-btn" onclick="closeRpsModal()">Close ❌</button>
-    </div>
-  </div>
-
-  <!-- ================= PERSISTENT GLOBAL FLOATING VOICE & VIDEO CALL ================= -->
-  <div id="floating-call-widget" class="floating-call-container">
-    <div class="floating-call-header" onmousedown="startDrag(event)">
-      <span>🐾 Puppy Voice & Video Call 🎙️</span>
-      <button onclick="toggleMinimizeCall()" id="minimize-call-btn" title="Minimize / Expand">🗕</button>
-    </div>
-    <div id="floating-call-body" class="floating-call-body">
-      <div class="video-grids">
-        <div class="video-card">
-          <video id="local-video" autoplay playsinline muted></video>
-          <span class="video-label">You 🐶</span>
-        </div>
-        <div class="video-card" id="remote-video-card">
-          <video id="remote-video" autoplay playsinline></video>
-          <span class="video-label">Partner 💖</span>
-        </div>
-      </div>
-      
-      <div id="controls-wrapper">
-        <div class="call-controls">
-          <button class="call-btn" onclick="startCall()">Connect Call</button>
-        </div>
+  <!-- Memory Lane Lightbox -->
+  <div id="album-lightbox" class="hidden-section">
+    <div id="album-lightbox-backdrop" onclick="closeAlbumLightbox()"></div>
+    <div id="album-lightbox-content">
+      <button id="album-lightbox-close" onclick="closeAlbumLightbox()" title="Close">✕</button>
+      <div id="album-lightbox-media"></div>
+      <div id="album-lightbox-meta">
+        <span id="album-lightbox-date"></span>
+        <button id="album-lightbox-delete" onclick="deleteCurrentAlbumItem()">🗑️ Remove</button>
       </div>
     </div>
   </div>

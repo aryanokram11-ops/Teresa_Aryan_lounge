@@ -1,4 +1,4 @@
-// Theme Manager & Persistence
+// Theme Manager & Persistence[cite: 8]
 function toggleTheme() {
   playSound('click');
   const htmlEl = document.documentElement;
@@ -56,14 +56,36 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   joinRoom(true);
+  setupTapHeartBurst();
 });
 
-// Web Audio API Sound Synthesizer
+// ================= TAP-ANYWHERE HEART BURST =================
+const tapHeartSymbols = ['💖', '💕', '💗', '🐾'];
+
+function setupTapHeartBurst() {
+  const layer = document.getElementById('tap-heart-layer');
+  if (!layer) return;
+
+  document.addEventListener('pointerdown', (event) => {
+    const heart = document.createElement('div');
+    heart.className = 'tap-heart';
+    heart.innerText = tapHeartSymbols[Math.floor(Math.random() * tapHeartSymbols.length)];
+    heart.style.left = event.clientX + 'px';
+    heart.style.top = event.clientY + 'px';
+    layer.appendChild(heart);
+    setTimeout(() => heart.remove(), 1000);
+  });
+}
+
+// Web Audio API Sound Synthesizer[cite: 8]
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx;
 
 function initAudio() {
   if (!audioCtx) audioCtx = new AudioCtx();
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
 }
 
 function playSound(type) {
@@ -119,12 +141,16 @@ function showSection(sectionId) {
     sec.classList.add('hidden-section');
     sec.classList.remove('active-section');
   });
-  
+
   const targetSection = document.getElementById(sectionId);
   if (targetSection) {
     targetSection.classList.add('active-section');
     targetSection.classList.remove('hidden-section');
   }
+
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.section === sectionId);
+  });
 }
 
 function selectGame(gameId) {
@@ -152,7 +178,7 @@ function backToGameList() {
   if (menu) menu.classList.remove('hidden-section');
 }
 
-// ================= RAVE-STYLE YOUTUBE WATCH PARTY SYNC =================
+// ================= YOUTUBE WATCH PARTY SYNC[cite: 8] =================
 const tag = document.createElement('script');
 tag.src = "https://www.youtube.com/iframe_api";
 const firstScriptTag = document.getElementsByTagName('script')[0];
@@ -163,6 +189,14 @@ if (firstScriptTag && firstScriptTag.parentNode) {
 let player;
 let isRemoteAction = false;
 let currentHostId = null;
+let lastWatchPartyState = null;
+let localPlayerIsPlaying = false;
+let heartbeatInterval = null;
+let currentLoadedVideoId = null;
+
+function isCurrentHost() {
+  return currentHostId === 'BOTH_HOSTS' || currentHostId === myClientId;
+}
 
 function onYouTubeIframeAPIReady() {
   player = new YT.Player('youtube-player', {
@@ -176,21 +210,79 @@ function onYouTubeIframeAPIReady() {
       'enablejsapi': 1
     },
     events: {
-      'onReady': () => console.log("Rave Watch Party Player Ready 📺"),
+      'onReady': onPlayerReady,
       'onStateChange': onPlayerStateChange
     }
   });
 }
 
-function onPlayerStateChange(event) {
+function onPlayerReady() {
+  console.log("Watch Party Player Ready 📺");
+  // Catch late joiners up to whatever's already playing
+  if (lastWatchPartyState) {
+    applyRemoteWatchPartyState(lastWatchPartyState);
+  }
+  if (!heartbeatInterval) {
+    heartbeatInterval = setInterval(sendHeartbeatSync, 4000);
+  }
+}
+
+function applyRemoteWatchPartyState(wp) {
+  if (!player || typeof player.loadVideoById !== 'function') return;
+  if (wp.updatedBy && wp.updatedBy === myClientId) return;
+
+  isRemoteAction = true;
+  const networkDelay = Math.max(0, (Date.now() - (wp.timestamp || Date.now())) / 1000);
+  const targetTime = Math.max(0, (wp.time || 0) + ((wp.action === 'PLAY' || wp.action === 'SYNC') ? networkDelay : 0));
+
+  if (wp.videoId && wp.videoId !== currentLoadedVideoId) {
+    currentLoadedVideoId = wp.videoId;
+    player.loadVideoById(wp.videoId, targetTime);
+    if (wp.action === 'PAUSE') {
+      setTimeout(() => { if (player && player.pauseVideo) player.pauseVideo(); }, 500);
+    }
+  } else if (player.getCurrentTime && player.getPlayerState) {
+    const localTime = player.getCurrentTime();
+    if (Math.abs(localTime - targetTime) > 1) {
+      player.seekTo(targetTime, true);
+    }
+    if (wp.action === 'PLAY') {
+      player.playVideo();
+    } else if (wp.action === 'PAUSE') {
+      player.pauseVideo();
+    }
+  }
+
+  setTimeout(() => { isRemoteAction = false; }, 600);
+}
+
+function sendHeartbeatSync() {
+  if (!isCurrentHost() || !localPlayerIsPlaying) return;
+  if (!player || typeof player.getCurrentTime !== 'function') return;
   if (isRemoteAction) return;
-  if (currentHostId !== 'BOTH_HOSTS' && currentHostId !== myClientId) return;
+
+  roomRef.child('watchParty').set({
+    action: 'SYNC',
+    videoId: currentLoadedVideoId,
+    time: player.getCurrentTime(),
+    updatedBy: myClientId,
+    timestamp: Date.now()
+  });
+}
+
+function onPlayerStateChange(event) {
+  if (event.data === YT.PlayerState.PLAYING) localPlayerIsPlaying = true;
+  if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) localPlayerIsPlaying = false;
+
+  if (isRemoteAction) return;
+  if (!isCurrentHost()) return;
   if (!player || typeof player.getCurrentTime !== 'function') return;
 
   const currentTime = player.getCurrentTime();
   if (event.data === YT.PlayerState.PLAYING) {
     roomRef.child('watchParty').set({
       action: 'PLAY',
+      videoId: currentLoadedVideoId,
       time: currentTime,
       updatedBy: myClientId,
       timestamp: Date.now()
@@ -198,10 +290,13 @@ function onPlayerStateChange(event) {
   } else if (event.data === YT.PlayerState.PAUSED) {
     roomRef.child('watchParty').set({
       action: 'PAUSE',
+      videoId: currentLoadedVideoId,
       time: currentTime,
       updatedBy: myClientId,
       timestamp: Date.now()
     });
+  } else if (event.data === YT.PlayerState.ENDED) {
+    playNextInQueue();
   }
 }
 
@@ -211,94 +306,123 @@ function extractVideoId(url) {
   return (match && match[2].length === 11) ? match[2] : null;
 }
 
-function loadPastedVideo() {
+function loadVideoIdNow(videoId) {
   if (currentHostId !== 'BOTH_HOSTS' && currentHostId !== myClientId) {
-    return alert("Only the current Host or Co-Host can load new videos! Type 'I love you' 3x in chat to unlock Co-Host 👑💖");
+    alert("Only the current Host can play videos! Click 'Claim Host' to take control 👑");
+    return false;
   }
+  if (!player || typeof player.loadVideoById !== 'function') return false;
+
+  currentLoadedVideoId = videoId;
+  player.loadVideoById(videoId);
+  roomRef.child('watchParty').set({
+    action: 'LOAD',
+    videoId: videoId,
+    time: 0,
+    updatedBy: myClientId,
+    timestamp: Date.now()
+  });
+  return true;
+}
+
+function loadPastedVideo() {
   playSound('click');
   const videoInput = document.getElementById('video-url-input');
   if (!videoInput) return;
-  const urlInput = videoInput.value.trim();
-  const videoId = extractVideoId(urlInput);
-  
-  if (videoId && player && typeof player.loadVideoById === 'function') {
-    player.loadVideoById(videoId);
-    videoInput.value = '';
+  const videoId = extractVideoId(videoInput.value.trim());
 
-    roomRef.child('watchParty').set({
-      action: 'LOAD',
-      videoId: videoId,
-      time: 0,
-      updatedBy: myClientId,
-      timestamp: Date.now()
-    });
-  } else {
-    alert("Please enter a valid YouTube link! 🥺");
-  }
+  if (!videoId) return alert("Please enter a valid YouTube link! 🥺");
+  if (loadVideoIdNow(videoId)) videoInput.value = '';
 }
 
-// ================= ROCK PAPER SCISSORS HOST BATTLE =================
-function openRpsModal() {
+// ================= WATCH QUEUE =================
+function addToQueue() {
   playSound('click');
-  const modal = document.getElementById('rps-modal');
-  const resDisplay = document.getElementById('rps-result-display');
-  if (modal) modal.classList.remove('hidden-section');
-  if (resDisplay) resDisplay.innerText = "Make your choice to settle who hosts!";
-}
+  const videoInput = document.getElementById('video-url-input');
+  if (!videoInput) return;
+  const videoId = extractVideoId(videoInput.value.trim());
+  if (!videoId) return alert("Please enter a valid YouTube link! 🥺");
 
-function closeRpsModal() {
-  playSound('click');
-  const modal = document.getElementById('rps-modal');
-  if (modal) modal.classList.add('hidden-section');
-}
-
-function playRps(myChoice) {
-  playSound('click');
-  roomRef.child(`rps/${myClientId}`).set({
-    choice: myChoice,
+  queueRef.push({
+    videoId: videoId,
+    addedBy: myClientId,
     timestamp: firebase.database.ServerValue.TIMESTAMP
   });
-  const resDisplay = document.getElementById('rps-result-display');
-  if (resDisplay) resDisplay.innerText = `You chose ${myChoice}. Waiting for partner... ⏳`;
+  videoInput.value = '';
 }
 
-function checkRpsOutcome(rpsData) {
-  const keys = Object.keys(rpsData);
-  if (keys.length < 2) return;
+function renderQueue(queue) {
+  const list = document.getElementById('queue-list');
+  if (!list) return;
+  const keys = Object.keys(queue || {});
 
-  const players = keys.map(k => ({ id: k, choice: rpsData[k].choice }));
-  const p1 = players[0];
-  const p2 = players[1];
-
-  const resDisplay = document.getElementById('rps-result-display');
-  if (p1.choice === p2.choice) {
-    if (resDisplay) resDisplay.innerText = `Both chose ${p1.choice}! It's a tie, play again! 🤝`;
+  if (keys.length === 0) {
+    list.innerHTML = '<li class="queue-empty">Queue\'s empty — add a video above! 🐾</li>';
     return;
   }
 
-  let winnerId = null;
-  if (
-    (p1.choice === 'Rock' && p2.choice === 'Scissors') ||
-    (p1.choice === 'Paper' && p2.choice === 'Rock') ||
-    (p1.choice === 'Scissors' && p2.choice === 'Paper')
-  ) {
-    winnerId = p1.id;
-  } else {
-    winnerId = p2.id;
-  }
-
-  roomRef.child('hostId').set(winnerId);
-  const resultMsg = winnerId === myClientId ? "🎉 You won RPS and became the Host! 👑" : "😢 Partner won RPS and is the Host.";
-  if (resDisplay) resDisplay.innerText = resultMsg;
-  playSound('win');
-
-  setTimeout(() => {
-    closeRpsModal();
-    roomRef.child('rps').remove();
-  }, 2000);
+  list.innerHTML = keys.map(key => {
+    const item = queue[key];
+    const mine = item.addedBy === myClientId ? 'You' : 'Partner';
+    return `
+      <li class="queue-item">
+        <img src="https://img.youtube.com/vi/${item.videoId}/mqdefault.jpg" alt="Queued video thumbnail">
+        <div class="queue-item-info">Added by ${mine}</div>
+        <div class="queue-item-actions">
+          <button onclick="playQueueItem('${key}')">▶️</button>
+          <button class="remove-btn" onclick="removeQueueItem('${key}')">✕</button>
+        </div>
+      </li>
+    `;
+  }).join('');
 }
 
-// ================= FIREBASE CONFIG & SYNC =================
+function playQueueItem(key) {
+  playSound('click');
+  const item = queueData[key];
+  if (!item) return;
+  if (loadVideoIdNow(item.videoId)) {
+    queueRef.child(key).remove();
+  }
+}
+
+function removeQueueItem(key) {
+  playSound('click');
+  queueRef.child(key).remove();
+}
+
+function playNextInQueue() {
+  if (!isCurrentHost()) return;
+  const keys = Object.keys(queueData || {});
+  if (keys.length === 0) return;
+  playQueueItem(keys[0]);
+}
+
+// ================= LIVE REACTIONS =================
+function sendReaction(emoji) {
+  playSound('click');
+  const ref = reactionsRef.push({ emoji, from: myClientId, timestamp: Date.now() });
+  setTimeout(() => ref.remove(), 4000);
+}
+
+function spawnFloatingReaction(emoji) {
+  const layer = document.getElementById('reactions-layer');
+  if (!layer) return;
+  const el = document.createElement('div');
+  el.className = 'floating-reaction';
+  el.innerText = emoji;
+  el.style.left = (10 + Math.random() * 75) + '%';
+  layer.appendChild(el);
+  setTimeout(() => el.remove(), 2300);
+}
+
+// ================= INSTANT HOST CLAIM SYSTEM[cite: 8] =================
+function claimHostRole() {
+  playSound('click');
+  roomRef.child('hostId').set(myClientId);
+}
+
+// ================= FIREBASE CONFIG & SYNC[cite: 8] =================
 const firebaseConfig = {
   databaseURL: "https://assistant-98715-default-rtdb.firebaseio.com"
 };
@@ -310,6 +434,9 @@ if (typeof firebase !== 'undefined' && !firebase.apps.length) {
 const db = firebase.database();
 let currentPartnerCode = "love-lounge";
 let roomRef = db.ref('rooms/' + currentPartnerCode);
+let queueRef = db.ref('queues/' + currentPartnerCode);
+let albumRef = db.ref('albums/' + currentPartnerCode);
+let reactionsRef = db.ref('reactions_live/' + currentPartnerCode);
 let myPresenceRef = null;
 
 let myClientId = localStorage.getItem('lounge_client_id');
@@ -327,7 +454,9 @@ const winningConditions = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,
 let myDuelRole = localStorage.getItem('lounge_duel_role') || null;
 let duelData = { aryanSecret: null, teresaSecret: null, currentTurn: 'Aryan', feedback: 'Set secrets to begin!', winner: null, aryanHistory: [], teresaHistory: [], roles: {} };
 
-let loveYouCount = 0;
+let queueData = {};
+let albumData = {};
+let currentAlbumKey = null;
 
 function setupPresence() {
   if (myPresenceRef) myPresenceRef.remove();
@@ -349,9 +478,11 @@ function listenToRoom() {
         if (activeCount >= 2) {
           statusEl.innerText = `Puppy Partner Connected! 🐶🐾`;
           statusEl.style.color = "#2ed573";
+          statusEl.classList.add('connected');
         } else {
           statusEl.innerText = `Waiting for puppy partner... ⏳🐕`;
           statusEl.style.color = "var(--primary-pink)";
+          statusEl.classList.remove('connected');
         }
       }
 
@@ -375,8 +506,6 @@ function listenToRoom() {
         }
       }
 
-      if (data.rps) checkRpsOutcome(data.rps);
-
       if (data.ticTacToe) {
         boardState = data.ticTacToe.boardState || ['', '', '', '', '', '', '', '', ''];
         currentPlayer = data.ticTacToe.currentPlayer || 'X';
@@ -394,30 +523,20 @@ function listenToRoom() {
         checkInteractiveRpsOutcome(data.interactiveRps);
       }
 
-      if (data.watchParty && player && typeof player.loadVideoById === 'function') {
-        const wp = data.watchParty;
-        if (wp.updatedBy && wp.updatedBy !== myClientId) {
-          isRemoteAction = true;
+      if (typeof data.loveMeter === 'number') {
+        updateLoveMeterUI(data.loveMeter);
+      }
 
-          if (wp.action === 'LOAD' && wp.videoId) {
-            player.loadVideoById(wp.videoId);
-          } else if (player.getCurrentTime && player.getPlayerState) {
-            const localTime = player.getCurrentTime();
-            const networkDelay = (Date.now() - (wp.timestamp || Date.now())) / 1000;
-            const targetTime = (wp.time || 0) + (wp.action === 'PLAY' ? networkDelay : 0);
+      if (data.hugs) {
+        checkForNewHug(data.hugs);
+      }
 
-            if (Math.abs(localTime - targetTime) > 0.8) {
-              player.seekTo(targetTime, true);
-            }
+      updateTypingIndicator(data.typing || {});
 
-            if (wp.action === 'PLAY') {
-              player.playVideo();
-            } else if (wp.action === 'PAUSE') {
-              player.pauseVideo();
-            }
-          }
-
-          setTimeout(() => { isRemoteAction = false; }, 500);
+      if (data.watchParty) {
+        lastWatchPartyState = data.watchParty;
+        if (player && typeof player.loadVideoById === 'function') {
+          applyRemoteWatchPartyState(data.watchParty);
         }
       }
     } else {
@@ -428,6 +547,24 @@ function listenToRoom() {
   roomRef.child('chatMessages').off();
   roomRef.child('chatMessages').on('child_added', (snapshot) => {
     appendChatMessage(snapshot.val());
+  });
+
+  queueRef.off();
+  queueRef.on('value', (snapshot) => {
+    queueData = snapshot.val() || {};
+    renderQueue(queueData);
+  });
+
+  albumRef.off();
+  albumRef.on('value', (snapshot) => {
+    albumData = snapshot.val() || {};
+    renderAlbum(albumData);
+  });
+
+  reactionsRef.off();
+  reactionsRef.on('child_added', (snapshot) => {
+    const reaction = snapshot.val();
+    if (reaction) spawnFloatingReaction(reaction.emoji);
   });
 }
 
@@ -441,9 +578,14 @@ function joinRoom(isAuto = false) {
   currentPartnerCode = inputCode;
   localStorage.setItem('lounge_partner_code', currentPartnerCode);
   roomRef = db.ref('rooms/' + currentPartnerCode);
+  queueRef = db.ref('queues/' + currentPartnerCode);
+  albumRef = db.ref('albums/' + currentPartnerCode);
+  reactionsRef = db.ref('reactions_live/' + currentPartnerCode);
   
   const chatContainer = document.getElementById('chat-messages-container');
   if (chatContainer) chatContainer.innerHTML = '';
+  const albumGrid = document.getElementById('album-grid');
+  if (albumGrid) albumGrid.innerHTML = '<p id="album-empty-msg" class="album-empty">No memories yet — upload your first photo or video together! 💕</p>';
   
   const inputRow = document.getElementById('room-input-row');
   const connectedDisplay = document.getElementById('room-connected-display');
@@ -465,7 +607,7 @@ function editPartnerCode() {
   if (connectedDisplay) connectedDisplay.classList.add('hidden-section');
 }
 
-// ================= CHAT & MEDIA SHARING =================
+// ================= CHAT & MEDIA SHARING[cite: 8] =================
 function handleChatKeyDown(event) {
   if (event.key === 'Enter') sendChatMessage();
 }
@@ -511,219 +653,220 @@ function appendChatMessage(msg) {
     div.innerHTML = `<img src="${msg.mediaUrl}" alt="Shared image">`;
   } else {
     div.innerText = msg.text;
-    
-    if (msg.text && msg.text.toLowerCase().trim() === 'i love you') {
-      loveYouCount++;
-      if (loveYouCount >= 3) {
-        triggerDualHost();
-      }
-    }
   }
+
+  div.addEventListener('dblclick', () => {
+    const reaction = document.createElement('span');
+    reaction.className = 'msg-heart-reaction';
+    reaction.innerText = '💖';
+    div.appendChild(reaction);
+    setTimeout(() => reaction.remove(), 1000);
+  });
 
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
 }
 
-function triggerDualHost() {
-  roomRef.child('hostId').set('BOTH_HOSTS');
-  playSound('win');
+// ================= LOVE METER =================
+let lastKnownLoveCount = null;
 
-  const container = document.getElementById('chat-messages-container');
-  if (container) {
-    const notifyDiv = document.createElement('div');
-    notifyDiv.className = 'chat-msg';
-    notifyDiv.style.background = 'var(--primary-pink)';
-    notifyDiv.style.color = 'white';
-    notifyDiv.style.textAlign = 'center';
-    notifyDiv.style.fontWeight = 'bold';
-    notifyDiv.innerText = '💖 Secret Unlocked! Both of you are now Co-Hosts! 👑👑';
-    container.appendChild(notifyDiv);
-    container.scrollTop = container.scrollHeight;
+function sendLoveTap() {
+  playSound('click');
+  roomRef.child('loveMeter').transaction((current) => (current || 0) + 1);
+}
+
+function updateLoveMeterUI(count) {
+  const countEl = document.getElementById('love-meter-count');
+  const btn = document.getElementById('love-meter-btn');
+  if (countEl) countEl.innerText = count;
+
+  if (btn && lastKnownLoveCount !== null && count > lastKnownLoveCount) {
+    btn.classList.add('pulse');
+    setTimeout(() => btn.classList.remove('pulse'), 400);
   }
+  lastKnownLoveCount = count;
 }
 
-// ================= NEW FEATURE 1: THE MEMORY ALBUM =================
-function openMemoryAlbum() {
+// ================= HUG / KISS OVERLAY =================
+let lastSeenHugTimestamp = Date.now();
+
+function sendHug() {
   playSound('click');
-  const modal = document.getElementById('memory-album-modal');
-  if (modal) modal.classList.remove('hidden-section');
-  loadMemoryAlbum();
+  const hugPayload = { from: myClientId, timestamp: Date.now() };
+  roomRef.child('hugs').set(hugPayload);
+  showHugOverlay('You sent a big puppy hug! 🤗💕');
 }
 
-function closeMemoryAlbum() {
-  playSound('click');
-  const modal = document.getElementById('memory-album-modal');
-  if (modal) modal.classList.add('hidden-section');
+function checkForNewHug(hugData) {
+  if (!hugData || !hugData.timestamp) return;
+  if (hugData.from === myClientId) return;
+  if (hugData.timestamp <= lastSeenHugTimestamp) return;
+
+  lastSeenHugTimestamp = hugData.timestamp;
+  showHugOverlay('Your puppy partner sent you a hug! 🤗💖');
 }
 
-function loadMemoryAlbum() {
-  roomRef.child('memoryAlbum').on('value', (snapshot) => {
-    const memories = snapshot.val();
-    const container = document.getElementById('memory-grid-container');
-    if (!container) return;
-    container.innerHTML = '';
-    if (!memories) {
-      container.innerHTML = '<p style="text-align:center; color:var(--text-muted); grid-column: 1/-1;">No memories added yet! Upload your first puppy memory 🐾</p>';
+function showHugOverlay(message) {
+  const overlay = document.getElementById('hug-overlay');
+  const text = document.getElementById('hug-overlay-text');
+  if (!overlay) return;
+  if (text) text.innerText = message;
+  overlay.classList.remove('hidden-section');
+  playSound('win');
+  triggerDogMemeRain();
+  setTimeout(() => overlay.classList.add('hidden-section'), 2200);
+}
+
+// ================= TYPING INDICATOR =================
+let typingTimeout = null;
+
+function notifyTyping() {
+  if (!roomRef) return;
+  roomRef.child('typing/' + myClientId).set(true);
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(() => {
+    roomRef.child('typing/' + myClientId).remove();
+  }, 1500);
+}
+
+function updateTypingIndicator(typingData) {
+  const indicator = document.getElementById('typing-indicator');
+  if (!indicator) return;
+  const partnerTyping = Object.keys(typingData).some(id => id !== myClientId && typingData[id]);
+  indicator.classList.toggle('hidden-section', !partnerTyping);
+}
+
+// ================= MEMORY LANE / SHARED ALBUM =================
+const ALBUM_MAX_VIDEO_MB = 15;
+const ALBUM_IMAGE_MAX_WIDTH = 1280;
+
+function handleAlbumUpload(event) {
+  const files = Array.from(event.target.files || []);
+  if (!files.length) return;
+
+  const statusEl = document.getElementById('album-upload-status');
+  let remaining = files.length;
+  if (statusEl) statusEl.innerText = `Uploading 0/${files.length}...`;
+
+  files.forEach((file) => {
+    const isVideo = file.type.startsWith('video/');
+    const isImage = file.type.startsWith('image/');
+    if (!isVideo && !isImage) { remaining--; return; }
+
+    if (isVideo && file.size > ALBUM_MAX_VIDEO_MB * 1024 * 1024) {
+      alert(`"${file.name}" is over ${ALBUM_MAX_VIDEO_MB}MB. Please trim or compress it before uploading. 🎬`);
+      remaining--;
+      if (statusEl && remaining <= 0) statusEl.innerText = '';
       return;
     }
-    Object.keys(memories).forEach(key => {
-      const mem = memories[key];
-      const card = document.createElement('div');
-      card.className = 'memory-card';
-      card.innerHTML = `
-        <img src="${mem.imageUrl}" alt="Memory Photo" style="width:100%; border-radius:12px; object-fit:cover; height:180px;">
-        <div class="memory-info" style="padding:10px 0;">
-          <h4 style="margin:0 0 5px 0;">${mem.title || 'Our Memory'}</h4>
-          <p style="margin:0 0 5px 0; font-size:0.9rem; color:var(--text-muted);">${mem.caption || ''}</p>
-          <small style="font-size:0.75rem; opacity:0.7;">${new Date(mem.timestamp).toLocaleDateString()}</small>
-        </div>
-      `;
-      container.appendChild(card);
-    });
+
+    const finishOne = (dataUrl) => {
+      albumRef.push({
+        type: isVideo ? 'video' : 'image',
+        dataUrl: dataUrl,
+        uploadedBy: myClientId,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      });
+      remaining--;
+      if (statusEl) {
+        statusEl.innerText = remaining > 0 ? `Uploading ${files.length - remaining}/${files.length}...` : 'All done! 💕';
+        if (remaining <= 0) setTimeout(() => { statusEl.innerText = ''; }, 2000);
+      }
+    };
+
+    if (isImage) {
+      compressImageFile(file, ALBUM_IMAGE_MAX_WIDTH, 0.82).then(finishOne).catch(() => remaining--);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => finishOne(e.target.result);
+      reader.readAsDataURL(file);
+    }
+  });
+
+  event.target.value = '';
+}
+
+function compressImageFile(file, maxWidth, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
   });
 }
 
-function uploadMemory() {
-  const fileInput = document.getElementById('memory-file-input');
-  const titleInput = document.getElementById('memory-title-input');
-  const captionInput = document.getElementById('memory-caption-input');
-  
-  if (!fileInput || !fileInput.files[0]) return alert("Please select an image file! 📸");
-  const file = fileInput.files[0];
-  const reader = new FileReader();
-  
-  reader.onload = function(e) {
-    roomRef.child('memoryAlbum').push({
-      imageUrl: e.target.result,
-      title: titleInput ? titleInput.value.trim() : 'Our Memory',
-      caption: captionInput ? captionInput.value.trim() : '',
-      timestamp: firebase.database.ServerValue.TIMESTAMP,
-      sender: myClientId
-    });
-    if (titleInput) titleInput.value = '';
-    if (captionInput) captionInput.value = '';
-    fileInput.value = '';
-    playSound('win');
-  };
-  reader.readAsDataURL(file);
-}
+function renderAlbum(album) {
+  const grid = document.getElementById('album-grid');
+  if (!grid) return;
+  const keys = Object.keys(album || {}).sort((a, b) => (album[a].timestamp || 0) - (album[b].timestamp || 0));
 
-// ================= NEW FEATURE 2: INSTAGRAM-STYLE CHAT DRAWING =================
-let isDrawing = false;
-let drawingCanvas = null;
-let drawingCtx = null;
-let brushColor = '#ff4757';
-let brushSize = 4;
-
-function openDrawingModal() {
-  playSound('click');
-  const modal = document.getElementById('chat-drawing-modal');
-  if (modal) modal.classList.remove('hidden-section');
-  initDrawingCanvas();
-}
-
-function closeDrawingModal() {
-  playSound('click');
-  const modal = document.getElementById('chat-drawing-modal');
-  if (modal) modal.classList.add('hidden-section');
-}
-
-function initDrawingCanvas() {
-  drawingCanvas = document.getElementById('chat-sketch-canvas');
-  if (!drawingCanvas) return;
-  drawingCtx = drawingCanvas.getContext('2d');
-  
-  drawingCanvas.width = 320;
-  drawingCanvas.height = 320;
-  
-  drawingCtx.lineCap = 'round';
-  drawingCtx.lineJoin = 'round';
-  drawingCtx.strokeStyle = brushColor;
-  drawingCtx.lineWidth = brushSize;
-
-  drawingCtx.fillStyle = '#ffffff';
-  drawingCtx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-
-  drawingCanvas.onmousedown = startDrawingMouse;
-  drawingCanvas.onmousemove = drawMouse;
-  drawingCanvas.onmouseup = stopDrawingMouse;
-  drawingCanvas.onmouseleave = stopDrawingMouse;
-
-  drawingCanvas.ontouchstart = startDrawingTouch;
-  drawingCanvas.ontouchmove = drawTouch;
-  drawingCanvas.ontouchend = stopDrawingTouch;
-}
-
-function setBrushColor(color) {
-  playSound('click');
-  brushColor = color;
-  if (drawingCtx) drawingCtx.strokeStyle = brushColor;
-}
-
-function clearSketchCanvas() {
-  playSound('click');
-  if (drawingCtx && drawingCanvas) {
-    drawingCtx.fillStyle = '#ffffff';
-    drawingCtx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+  if (keys.length === 0) {
+    grid.innerHTML = '<p id="album-empty-msg" class="album-empty">No memories yet — upload your first photo or video together! 💕</p>';
+    return;
   }
+
+  grid.innerHTML = keys.map((key) => {
+    const item = album[key];
+    const media = item.type === 'video'
+      ? `<video src="${item.dataUrl}" muted preload="metadata"></video>`
+      : `<img src="${item.dataUrl}" alt="Shared memory">`;
+    const dateLabel = item.timestamp ? new Date(item.timestamp).toLocaleDateString() : '';
+    return `
+      <div class="album-item" onclick="openAlbumLightbox('${key}')">
+        ${media}
+        <span class="album-type-badge">${item.type === 'video' ? '🎬' : '🖼️'}</span>
+        <span class="album-date-tag">${dateLabel}</span>
+      </div>
+    `;
+  }).reverse().join('');
 }
 
-function startDrawingMouse(e) {
-  isDrawing = true;
-  const rect = drawingCanvas.getBoundingClientRect();
-  drawingCtx.beginPath();
-  drawingCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+function openAlbumLightbox(key) {
+  const item = albumData[key];
+  if (!item) return;
+  currentAlbumKey = key;
+
+  const lightbox = document.getElementById('album-lightbox');
+  const mediaBox = document.getElementById('album-lightbox-media');
+  const dateEl = document.getElementById('album-lightbox-date');
+  if (!lightbox || !mediaBox) return;
+
+  mediaBox.innerHTML = item.type === 'video'
+    ? `<video src="${item.dataUrl}" controls autoplay playsinline></video>`
+    : `<img src="${item.dataUrl}" alt="Shared memory">`;
+  if (dateEl) dateEl.innerText = item.timestamp ? new Date(item.timestamp).toLocaleString() : '';
+
+  lightbox.classList.remove('hidden-section');
 }
 
-function drawMouse(e) {
-  if (!isDrawing) return;
-  const rect = drawingCanvas.getBoundingClientRect();
-  drawingCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-  drawingCtx.stroke();
+function closeAlbumLightbox() {
+  const lightbox = document.getElementById('album-lightbox');
+  const mediaBox = document.getElementById('album-lightbox-media');
+  if (lightbox) lightbox.classList.add('hidden-section');
+  if (mediaBox) mediaBox.innerHTML = '';
+  currentAlbumKey = null;
 }
 
-function stopDrawingMouse() {
-  isDrawing = false;
+function deleteCurrentAlbumItem() {
+  if (!currentAlbumKey) return;
+  albumRef.child(currentAlbumKey).remove();
+  closeAlbumLightbox();
 }
 
-function startDrawingTouch(e) {
-  e.preventDefault();
-  isDrawing = true;
-  const rect = drawingCanvas.getBoundingClientRect();
-  const touch = e.touches[0];
-  drawingCtx.beginPath();
-  drawingCtx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
-}
-
-function drawTouch(e) {
-  e.preventDefault();
-  if (!isDrawing) return;
-  const rect = drawingCanvas.getBoundingClientRect();
-  const touch = e.touches[0];
-  drawingCtx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
-  drawingCtx.stroke();
-}
-
-function stopDrawingTouch() {
-  isDrawing = false;
-}
-
-function sendDrawingToChat() {
-  if (!drawingCanvas) return;
-  const dataUrl = drawingCanvas.toDataURL('image/png');
-  
-  roomRef.child('chatMessages').push({
-    sender: myClientId,
-    mediaUrl: dataUrl,
-    type: 'media',
-    timestamp: firebase.database.ServerValue.TIMESTAMP
-  });
-
-  closeDrawingModal();
-  playSound('win');
-}
-
-// ================= GAME FUNCTIONS =================
+// ================= GAME FUNCTIONS[cite: 8] =================
 function setRole(role) {
   playSound('click');
   myRole = role;
@@ -905,7 +1048,28 @@ function resetDuelGame() {
   roomRef.child('secretDuel').update({ aryanSecret: null, teresaSecret: null, currentTurn: 'Aryan', feedback: 'Reset!', winner: null, aryanHistory: [], teresaHistory: [] });
 }
 
-// ================= INTERACTIVE PAWS & CLAWS RPS =================
+// ================= INTERACTIVE PAWS & CLAWD RPS & DOG MEME RAIN[cite: 8] =================
+const dogMemesList = ['🐶', '🐕', '🐩', '🐾', '🦴', '🤪', '🤩', '😎', '🐶✨', '🐾💖', '🌭', '🦊'];
+
+function triggerDogMemeRain() {
+  const container = document.getElementById('meme-rain-container');
+  if (!container) return;
+
+  for (let i = 0; i < 22; i++) {
+    const meme = document.createElement('div');
+    meme.className = 'floating-dog-meme';
+    meme.innerText = dogMemesList[Math.floor(Math.random() * dogMemesList.length)];
+    meme.style.left = Math.random() * 90 + 'vw';
+    meme.style.animationDuration = (2.5 + Math.random() * 2.5) + 's';
+    meme.style.animationDelay = (Math.random() * 0.8) + 's';
+    container.appendChild(meme);
+
+    setTimeout(() => {
+      meme.remove();
+    }, 5500);
+  }
+}
+
 function submitInteractiveRps(moveChoice) {
   playSound('click');
   const avatarMap = { 'Rock': '🐶✊', 'Paper': '🐕✋', 'Scissors': '🐩✌️' };
@@ -981,6 +1145,7 @@ function checkInteractiveRpsOutcome(rpsData) {
 
   if (isWinner) {
     playSound('win');
+    triggerDogMemeRain();
   } else {
     playSound('wrong');
   }
@@ -1007,63 +1172,7 @@ function resetInteractiveRps() {
   if (replayBtn) replayBtn.classList.add('hidden-section');
 }
 
-// ================= FLOATING CALL WIDGET CONTROLS =================
-let isCallMinimized = false;
-
-function toggleMinimizeCall() {
-  playSound('click');
-  isCallMinimized = !isCallMinimized;
-  const widget = document.getElementById('floating-call-widget');
-  const btn = document.getElementById('minimize-call-btn');
-  if (widget && btn) {
-    if (isCallMinimized) {
-      widget.classList.add('minimized');
-      btn.innerText = '🗖';
-    } else {
-      widget.classList.remove('minimized');
-      btn.innerText = '🗕';
-    }
-  }
-}
-
-let isDragging = false;
-let dragOffsetX = 0;
-let dragOffsetY = 0;
-
-function startDrag(e) {
-  if (e.target.tagName === 'BUTTON') return;
-  isDragging = true;
-  const widget = document.getElementById('floating-call-widget');
-  const rect = widget.getBoundingClientRect();
-  
-  dragOffsetX = e.clientX - rect.left;
-  dragOffsetY = e.clientY - rect.top;
-
-  document.addEventListener('mousemove', onDrag);
-  document.addEventListener('mouseup', stopDrag);
-}
-
-function onDrag(e) {
-  if (!isDragging) return;
-  const widget = document.getElementById('floating-call-widget');
-  
-  let newX = window.innerWidth - e.clientX - (widget.offsetWidth - dragOffsetX);
-  let newY = window.innerHeight - e.clientY - (widget.offsetHeight - dragOffsetY);
-
-  if (newX < 10) newX = 10;
-  if (newY < 10) newY = 10;
-
-  widget.style.right = newX + 'px';
-  widget.style.bottom = newY + 'px';
-}
-
-function stopDrag() {
-  isDragging = false;
-  document.removeEventListener('mousemove', onDrag);
-  document.removeEventListener('mouseup', stopDrag);
-}
-
-// ================= WEBRTC & GLOBAL CALL MANAGER =================
+// ================= WEBRTC & GLOBAL CALL MANAGER[cite: 8] =================
 let localStream = null;
 let remoteStream = null;
 let peerConnection = null;
@@ -1123,7 +1232,7 @@ async function startCall() {
     renderActiveCallControls();
 
   } catch (err) {
-    alert("Camera/Microphone access error! Check permissions 🥺");
+    alert("Camera/Microphone access error! Check iOS permissions in Settings -> Safari/Chrome 🥺");
   }
 }
 
@@ -1183,7 +1292,7 @@ function toggleRemoteFullscreen() {
     else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
   } else {
     if (document.exitFullscreen) document.exitFullscreen();
-    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    else if (document.webkitExitFullscreen) document.exitFullscreen();
   }
 }
 
@@ -1227,6 +1336,4 @@ function disconnectCall() {
       </div>
     `;
   }
-
-  console.log("Video and voice calls completely disconnected.");
 }
